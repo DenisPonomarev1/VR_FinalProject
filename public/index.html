@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Mars Base — FP Controls + Solid Walls + Mars Env</title>
+    <meta name="description" content="A-Frame Mars Base Hub (custom collisions)">
+    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
+    <script src="js/game.js"></script>
+    <style>
+      html, body { margin:0; height:100%; background:#000; overflow:hidden; }
+    </style>
+  </head>
+  <body>
+    <a-scene background="color:#101218">
+      <!-- Player -->
+      <a-entity id="rig"
+                position="0 1.6 0"
+                look-controls="pointerLockEnabled:false; magicWindowTrackingEnabled:true"
+                fp-controls="speed:3.5; radius:0.35">
+        <a-entity camera position="0 0 0">
+          <a-entity cursor="rayOrigin:mouse"></a-entity>
+        </a-entity>
+      </a-entity>
+
+      <!-- Base walls (front open) -->
+      <a-box class="solid" position="-5 1.2 0" width="0.2" height="2.4" depth="10" color="#e9ecef"></a-box>
+      <a-box class="solid" position="5 1.2 0"  width="0.2" height="2.4" depth="10" color="#e9ecef"></a-box>
+      <a-box class="solid" position="0 1.2 5"  width="10"  height="2.4" depth="0.2" color="#e9ecef"></a-box>
+      <a-box position="0 2.4 0" width="10" height="0.2" depth="10" color="#dfe6e9"></a-box>
+      <a-box position="0 0.05 0" width="10" height="0.1" depth="10" color="#c8d6e5"></a-box>
+
+      <!-- === FRONT WALL: LEFT SECTION === -->
+      <a-box class="solid"
+        position="-3.25 1.2 -5"
+        width="3.5" height="2.4" depth="0.2"
+        color="#e9ecef"></a-box>
+
+        <!-- === FRONT WALL: RIGHT SECTION === -->
+      <a-box class="solid"
+        position="3.25 1.2 -5"
+        width="3.5" height="2.4" depth="0.2"
+        color="#e9ecef"></a-box>
+
+
+
+      <!-- === TUNNEL: LEFT WALL  === -->
+      <a-box class="solid"
+        position="-1.5 1.2 -6.5"
+        width="0.2" height="2.4" depth="3"
+        color="#999"></a-box>
+
+      <!-- === TUNNEL: RIGHT WALL === -->
+      <a-box class="solid"
+        position="1.5 1.2 -6.5"
+        width="0.2" height="2.4" depth="3"
+        color="#999"></a-box>
+
+        <!-- === TUNNEL: FLOOR === -->
+      <a-box position="0 0.05 -6.5"
+        width="3" height="0.1" depth="3"
+        color="#bfc9ca"></a-box>
+
+      <!-- === TUNNEL: CEILING (visual only, no collision) === -->
+      <a-box
+        position="0 2.4 -6.5"
+        width="3" height="0.2" depth="3"
+        color="#b0b0b0"></a-box>
+
+
+
+
+
+      <!-- Mars landscape -->
+      <a-entity id="marsEnv"
+                position="0 0 0"
+                environment="
+                  preset: yavapai;
+                  groundColor: #b5651d;
+                  groundColor2: #e39c5b;
+                  horizonColor: #e2a36f;
+                  skyColor: #f6e5c0;
+                  lighting: distant;
+                  shadow: true;
+                  groundYScale: 5;
+                  dressing: rocks;
+                  dressingAmount: 30;
+                  dressingColor: #a0522d;
+                  fog: 0.8;
+                  flatShading: true;">
+      </a-entity>
+
+      <!-- Lighting -->
+      <a-entity light="type: ambient; color: #BBB"></a-entity>
+      <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="2 6 1"></a-entity>
+    </a-scene>
+  </body>
+</html>
