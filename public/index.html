@@ -12,6 +12,10 @@
   </head>
   <body>
     <a-scene background="color:#101218">
+      <a-assets>
+        <a-asset-item id="doorGLB" response-type="arraybuffer" src="assets/door.glb"></a-asset-item>
+      </a-assets>
+
       <!-- Player -->
       <a-entity id="rig"
                 position="0 1.6 0"
@@ -43,28 +47,63 @@
 
 
 
-      <!-- === TUNNEL: LEFT WALL  === -->
+            <!-- === EXTENDED TUNNEL (9m depth) === -->
+
+      <!-- Left wall -->
       <a-box class="solid"
-        position="-1.5 1.2 -6.5"
-        width="0.2" height="2.4" depth="3"
+        position="-1.5 1.2 -9.5"
+        width="0.2" height="2.4" depth="9"
         color="#999"></a-box>
 
-      <!-- === TUNNEL: RIGHT WALL === -->
+      <!-- Right wall -->
       <a-box class="solid"
-        position="1.5 1.2 -6.5"
-        width="0.2" height="2.4" depth="3"
+        position="1.5 1.2 -9.5"
+        width="0.2" height="2.4" depth="9"
         color="#999"></a-box>
 
-        <!-- === TUNNEL: FLOOR === -->
-      <a-box position="0 0.05 -6.5"
-        width="3" height="0.1" depth="3"
+      <!-- Floor -->
+      <a-box position="0 0.05 -9.5"
+        width="3" height="0.1" depth="9"
         color="#bfc9ca"></a-box>
 
-      <!-- === TUNNEL: CEILING (visual only, no collision) === -->
+      <!-- Ceiling (visual only) -->
       <a-box
-        position="0 2.4 -6.5"
-        width="3" height="0.2" depth="3"
+        position="0 2.4 -9.5"
+        width="3" height="0.2" depth="9"
         color="#b0b0b0"></a-box>
+
+
+      <!-- === OUTER DOOR WITH HINGE (corrected hinge pivot) === -->
+<a-entity id="outerDoorHinge"
+          position="1.5 0 -13.97"
+          rotation="0 0 0"
+          interactive-door="openAngle: -90; duration: 1000">
+
+  <!-- Door model inside, offset so hinge aligns with right tunnel wall -->
+  <a-entity id="outerDoorModel"
+            gltf-model="#doorGLB"
+            position="-1.5 2.326 0"
+            rotation="0 0 0"
+            scale="0.024 0.011 0.01">
+  </a-entity>
+</a-entity>
+
+<a-entity id="outerDoorHinge"
+          position="1.5 0 -5.055"
+          rotation="0 0 0"
+          interactive-door="openAngle: -90; duration: 1000">
+
+  <!-- Door model inside, offset so hinge aligns with right tunnel wall -->
+  <a-entity id="outerDoorModel"
+            gltf-model="#doorGLB"
+            position="-1.5 2.326 0"
+            rotation="0 0 0"
+            scale="0.024 0.011 0.01">
+  </a-entity>
+</a-entity>
+
+
+
 
 
 
@@ -81,7 +120,7 @@
                   skyColor: #f6e5c0;
                   lighting: distant;
                   shadow: true;
-                  groundYScale: 5;
+                  groundYScale: 1.8;
                   dressing: rocks;
                   dressingAmount: 30;
                   dressingColor: #a0522d;
