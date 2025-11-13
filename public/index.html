@@ -4,6 +4,11 @@
     <title>Mars Base — FP Controls + Solid Walls + Mars Env</title>
     <meta name="description" content="A-Frame Mars Base Hub (custom collisions)">
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+
+    <!-- add extras  -->
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.6.0/dist/aframe-extras.min.js"></script>
+
+    <script src="/js/spinning-effect.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
     <script src="js/game.js"></script>
     <style>
@@ -14,17 +19,110 @@
     <a-scene background="color:#101218">
       <a-assets>
         <a-asset-item id="doorGLB" response-type="arraybuffer" src="assets/door.glb"></a-asset-item>
+        <a-asset-item id="phobos" response-type="arraybuffer" src="assets/phobos.glb"></a-asset-item>
+        <a-asset-item id="deimos" response-type="arraybuffer" src="assets/deimos_centered.glb"></a-asset-item>
+
+        <img id="mars1" src="assets/mars1.jpg">
+        <img id="mars2" src="assets/mars2.jpg">
+        <img id="textBG_1" src="assets/textBG_1.jpg">
+        <img id="textBG_2" src="assets/textBG_2.jpg">
+        <img id="textBG_3" src="assets/textBG_3.jpg">
+        <img id="hubBG" src="assets/hubBG.png">
       </a-assets>
 
-      <!-- Player -->
-      <a-entity id="rig"
-                position="0 1.6 0"
-                look-controls="pointerLockEnabled:false; magicWindowTrackingEnabled:true"
-                fp-controls="speed:3.5; radius:0.35">
-        <a-entity camera position="0 0 0">
-          <a-entity cursor="rayOrigin:mouse"></a-entity>
+      <!-- RIG that moves -->
+        <a-entity id="rig"
+                  position="0 0 0"
+                  fp-controls="speed:3.5; radius:0.35">
+
+          <!-- HEAD / CAMERA: does looking + is at player height -->
+          <a-entity id="camera"
+                    camera
+                    position="0 1.6 0"
+                    look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: true">
+            <a-entity cursor="rayOrigin: mouse"></a-entity>
+        </a-entity>
+
+      <!--  hands / lasers -->
+      <a-entity id="leftHand"
+                laser-controls="hand: left"
+                cursor="rayOrigin: entity; downEvents: triggerdown; upEvents: triggerup"
+                raycaster="objects: .interactive; far: 20;"
+                line="opacity: 0.9">
+      </a-entity>
+
+      <a-entity id="rightHand"
+                laser-controls="hand: right"
+                cursor="rayOrigin: entity; downEvents: triggerdown; upEvents: triggerup"
+                raycaster="objects: .interactive; far: 20;"
+                line="opacity: 0.9">
+      </a-entity>
+
+      </a-entity>
+
+      <!-- Clean readable welcome text -->
+      <a-entity id="welcomeText"
+                position="0 2 -3"
+                text="value: Welcome to the Mars Base. Here you will explore the planet and the whole solar system.;
+                      align: center;
+                      width: 4;
+                      color: #ffd480;
+                      wrapCount: 40;
+                      shader: standard;">
+        <a-animation attribute="position"
+                      from="0 2 -3"
+                      to="0 2.2 -3"
+                      dur="2500"
+                      direction="alternate"
+                      easing="easeInOutSine"
+                      repeat="indefinite"></a-animation>
+      </a-entity>
+
+      <a-entity id="phobos" position="4 1.78 3" rotation="0 0 0" scale="0.03 0.03 0.03"
+                gltf-model="#phobos"
+                animation="property:rotation; to:0 360 0; loop:true; dur:30000"
+                shadow></a-entity>
+
+      <a-entity id="deimos" position="4.172 1.78 0.745" rotation="0 0 0" scale="0.0005 0.0005 0.0005"
+                gltf-model="#deimos"
+                animation="property:rotation; to:0 360 0; loop:true; dur:30000"
+                shadow></a-entity>
+
+                  
+      <a-entity id="phobos_info_panel" position="3.463 0.7 3.3" rotation="-30 -90 0">
+        <a-plane width="2.0" height="1"
+                  src="#textBG_2"
+                  material="opacity: 0.95; side: double; shader: flat;"
+                  shadow></a-plane>
+        <a-entity text="value: Phobos is the larger of Mars' two moons, known for its irregular, potato-like shape and close orbit. It is spiraling closer to Mars and may crash or form a ring in ~50 million years.;
+                        color: white;
+                        wrapCount: 40;
+                        align: center;
+                        baseline: center;
+                        width: 2;
+                        shader: msdf;
+                        font: https://cdn.aframe.io/fonts/Roboto-msdf.json;"
+                  position="0 0 0.01">
         </a-entity>
       </a-entity>
+
+      <a-entity id="deimos_info_panel" position="3.463 0.7 0.717" rotation="-30 -90 0">
+        <a-plane width="2.0" height="1"
+                  src="#textBG_3"
+                  material="opacity: 0.95; side: double; shader: flat;"
+                  shadow></a-plane>
+        <a-entity text="value: Deimos is Mars smaller, outer moon—smoother and dust-draped, with a rounded rubble-pile shape. It orbits farther out (~23,460 km) every ~30 hours and is slowly drifting away over time.;
+                        color: white;
+                        wrapCount: 40;
+                        align: center;
+                        baseline: center;
+                        width: 2;
+                        shader: msdf;
+                        font:	https://cdn.aframe.io/fonts/Roboto-msdf.json"
+                  position="0 0 0.01">
+        </a-entity>
+      </a-entity>
+
 
       <!-- Base walls (front open) -->
       <a-box class="solid" position="-5 1.2 0" width="0.2" height="2.4" depth="10" color="#e9ecef"></a-box>
@@ -33,80 +131,83 @@
       <a-box position="0 2.4 0" width="10" height="0.2" depth="10" color="#dfe6e9"></a-box>
       <a-box position="0 0.05 0" width="10" height="0.1" depth="10" color="#c8d6e5"></a-box>
 
-      <!-- === FRONT WALL: LEFT SECTION === -->
+      <!-- FRONT WALLS -->
       <a-box class="solid"
-        position="-3.25 1.2 -5"
-        width="3.5" height="2.4" depth="0.2"
-        color="#e9ecef"></a-box>
+              position="-3.25 1.2 -5"
+              width="3.5" height="2.4" depth="0.2"
+              color="#e9ecef"></a-box>
 
-        <!-- === FRONT WALL: RIGHT SECTION === -->
       <a-box class="solid"
-        position="3.25 1.2 -5"
-        width="3.5" height="2.4" depth="0.2"
-        color="#e9ecef"></a-box>
+              position="3.25 1.2 -5"
+              width="3.5" height="2.4" depth="0.2"
+              color="#e9ecef"></a-box>
 
+      <!-- Left wall image -->
+      <a-plane src="#mars1"
+                position="-3.2 1.2 -4.8"
+                rotation="0 0 0"
+                scale="2 2 2"
+                width="1.2" height="0.8"
+                material="side:double; shader:flat;">
+      </a-plane>
 
+      <!-- Right wall image -->
+      <a-plane src="#mars2"
+                position="3.22 1.2 -4.8"
+                rotation="0 0 0"
+                scale="2 2 2"
+                width="1.2" height="0.8"
+                material="side:double; shader:flat;">
+      </a-plane>
 
-            <!-- === EXTENDED TUNNEL (9m depth) === -->
-
-      <!-- Left wall -->
+      <!-- EXTENDED TUNNEL -->
       <a-box class="solid"
-        position="-1.5 1.2 -9.5"
-        width="0.2" height="2.4" depth="9"
-        color="#999"></a-box>
+              position="-1.5 1.2 -9.5"
+              width="0.2" height="2.4" depth="9"
+              color="#999"></a-box>
 
-      <!-- Right wall -->
       <a-box class="solid"
-        position="1.5 1.2 -9.5"
-        width="0.2" height="2.4" depth="9"
-        color="#999"></a-box>
+              position="1.5 1.2 -9.5"
+              width="0.2" height="2.4" depth="9"
+              color="#999"></a-box>
 
-      <!-- Floor -->
       <a-box position="0 0.05 -9.5"
-        width="3" height="0.1" depth="9"
-        color="#bfc9ca"></a-box>
+              width="3" height="0.1" depth="9"
+              color="#bfc9ca"></a-box>
 
-      <!-- Ceiling (visual only) -->
-      <a-box
-        position="0 2.4 -9.5"
-        width="3" height="0.2" depth="9"
-        color="#b0b0b0"></a-box>
+      <a-box position="0 2.4 -9.5"
+              width="3" height="0.2" depth="9"
+              color="#b0b0b0"></a-box>
 
+      <!-- Doors with your interactive-door component -->
+      <a-entity id="outerDoorHinge"
+                class="interactive"
+                position="1.5 0 -13.97"
+                rotation="0 0 0"
+                interactive-door="openAngle: -90; duration: 1000">
+        <a-entity id="outerDoorModel"
+                  gltf-model="#doorGLB"
+                  position="-1.5 2.326 0."
+                  rotation="0 0 0"
+                  scale="0.024 0.011 0.01">
+        </a-entity>
+      </a-entity>
 
-      <!-- === OUTER DOOR WITH HINGE (corrected hinge pivot) === -->
-<a-entity id="outerDoorHinge"
-          position="1.5 0 -13.97"
+      <a-entity id="outerDoorHinge2"
+        position="1.5 0 -5.055"
+        interactive-door="
+          openAngle: -90; duration: 1000;
+          closedPos: 0.002 1.2 -5.055;       <!-- across the doorway -->
+          openPos:   1.57  1.2 -6.084;       <!-- thin post offset to the right/back -->
+          closedSize: 3 2.4 0.05;
+          openSize:   0.05 2.4 3">
+        <a-entity id="outerDoorModel2"
+          gltf-model="#doorGLB"
+          position="-1.5 2.326 0.1"
           rotation="0 0 0"
-          interactive-door="openAngle: -90; duration: 1000">
-
-  <!-- Door model inside, offset so hinge aligns with right tunnel wall -->
-  <a-entity id="outerDoorModel"
-            gltf-model="#doorGLB"
-            position="-1.5 2.326 0"
-            rotation="0 0 0"
-            scale="0.024 0.011 0.01">
-  </a-entity>
-</a-entity>
-
-<a-entity id="outerDoorHinge"
-          position="1.5 0 -5.055"
-          rotation="0 0 0"
-          interactive-door="openAngle: -90; duration: 1000">
-
-  <!-- Door model inside, offset so hinge aligns with right tunnel wall -->
-  <a-entity id="outerDoorModel"
-            gltf-model="#doorGLB"
-            position="-1.5 2.326 0"
-            rotation="0 0 0"
-            scale="0.024 0.011 0.01">
-  </a-entity>
-</a-entity>
-
-
-
-
-
-
+          scale="0.024 0.011 0.01">
+        </a-entity>
+      </a-entity>
 
 
       <!-- Mars landscape -->
