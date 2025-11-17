@@ -259,3 +259,15 @@ AFRAME.registerComponent('ignore-raycast', {
     }
 });
 
+AFRAME.registerComponent('scene-link', {
+    schema: {
+        href: { type: 'string' }
+    },
+    init() {
+        this.el.addEventListener('click', () => {
+        if (!this.data.href) return;
+        // Go to another HTML page (relative to current one)
+        window.location.href = this.data.href;
+        });
+    }
+});

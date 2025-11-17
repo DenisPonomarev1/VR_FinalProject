@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Jupiter Scene</title>
+        <meta name="description" content="A-Frame Jupiter Scene">
+        <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+        <!-- Environment + movement controls -->
+        <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.6.0/dist/aframe-extras.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
+
+        <style>
+        html, body { margin:0; height:100%; background:#000; overflow:hidden; }
+        </style>
+    </head>
+    <body>
+        <a-scene background="color: #000010">
+
+        <a-assets>
+            <!-- TODO: replace with a real Jupiter-cloud texture -->
+            <img id="jupiterCloudTex" src="assets/jupiter_clouds.jpg">
+        </a-assets>
+
+        <!-- Free-fly rig: left stick / WASD moves, head/VR looks -->
+        <a-entity id="rig"
+                    position="0 2 0"
+                    movement-controls="fly: true; speed: 0.5">
+            <a-entity camera look-controls></a-entity>
+        </a-entity>
+
+        <!-- Starry / outer environment -->
+        <a-entity environment="
+            preset: starry;
+            ground: none;
+            lighting: distant;
+            fog: 0.7;
+            skyType: gradient;
+            skyColor: #050515;
+            horizonColor: #201040;">
+        </a-entity>
+
+        <!-- Big Jupiter atmosphere shell (you are inside this) -->
+        <a-sphere id="jupiterShell"
+                    radius="40"
+                    position="0 0 0"
+                    material="
+                    src: #jupiterCloudTex;
+                    color: #ffddbb;
+                    metalness: 0.0;
+                    roughness: 1.0;
+                    side: back;
+                    transparent: true;
+                    opacity: 0.95;"
+                    animation="property: rotation; to: 0 360 0; loop: true; dur: 180000; easing: linear">
+        </a-sphere>
+
+        <!-- Inner banded cloud layer (for a sense of depth) -->
+        <a-sphere id="innerClouds"
+                    radius="25"
+                    position="0 0 0"
+                    material="
+                    src: #jupiterCloudTex;
+                    color: #ffccaa;
+                    metalness: 0.0;
+                    roughness: 1.0;
+                    side: back;
+                    transparent: true;
+                    opacity: 0.7;"
+                    animation="property: rotation; to: 0 -360 0; loop: true; dur: 120000; easing: linear">
+        </a-sphere>
+
+        <!-- Great Red Spot marker (educational hotspot) -->
+        <a-entity id="grsMarker"
+                    position="10 0 -15">
+            <a-sphere radius="1.2"
+                    material="color: #c3472f; emissive: #802010; emissiveIntensity: 0.4; opacity: 0.9; transparent: true">
+            </a-sphere>
+            <a-entity position="0 2 0"
+                    text="value: Great Red Spot — a giant storm larger than Earth.;
+                            align: center;
+                            width: 8;
+                            wrapCount: 40;
+                            color: #ffffff;">
+            </a-entity>
+        </a-entity>
+
+        <!-- Altitude info panel (example) -->
+        <a-entity id="altitudeInfo"
+                    position="0 8 -5">
+            <a-plane width="4" height="1.5"
+                    material="color: #000000; opacity: 0.7; side: double">
+            </a-plane>
+            <a-entity position="0 0 0.01"
+                    text="value: You are flying through Jupiter's upper cloud layers.\nThese clouds are mostly ammonia ice, floating above deeper, denser gas.;
+                            align: center;
+                            width: 3.5;
+                            wrapCount: 35;
+                            color: #ffffff;">
+            </a-entity>
+        </a-entity>
+
+        <!-- Simple light so panels are readable -->
+        <a-entity light="type: ambient; intensity: 0.7; color: #ffffff"></a-entity>
+        <a-entity light="type: directional; intensity: 0.5; color: #fffae0" position="5 10 -5"></a-entity>
+        </a-scene>
+    </body>
+</html>
