@@ -21,6 +21,9 @@
         <a-asset-item id="doorGLB" response-type="arraybuffer" src="assets/door.glb"></a-asset-item>
         <a-asset-item id="phobos" response-type="arraybuffer" src="assets/phobos.glb"></a-asset-item>
         <a-asset-item id="deimos" response-type="arraybuffer" src="assets/deimos_centered.glb"></a-asset-item>
+        <a-asset-item id="basaltRock" response-type="arraybuffer" src="assets/basalt.glb"></a-asset-item>
+        <a-asset-item id="sciFiTable" response-type="arraybuffer" src="assets/sci-fi_table.glb"></a-asset-item>
+
 
         <img id="mars1" src="assets/mars1.jpg">
         <img id="mars2" src="assets/mars2.jpg">
@@ -36,12 +39,25 @@
                   fp-controls="speed:3.5; radius:0.35">
 
           <!-- HEAD / CAMERA: does looking + is at player height -->
+
+
           <a-entity id="camera"
                     camera
                     position="0 1.6 0"
                     look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: true">
             <a-entity cursor="rayOrigin: mouse"></a-entity>
-        </a-entity>
+
+            <!-- HUD notification -->
+            <a-entity id="notificationText"
+                      position="0 -0.3 -1"
+                      text="value: ;
+                            align: center;
+                            width: 2;
+                            color: #00ff99;"
+                      visible="false">
+            </a-entity>
+          </a-entity>
+
 
       <!--  hands / lasers -->
       <a-entity id="leftHand"
@@ -208,6 +224,135 @@
           scale="0.024 0.011 0.01">
         </a-entity>
       </a-entity>
+
+      <!-- Collectible basalt rock outside the base -->
+      <a-entity id="basaltRockRoot"
+                position="0 0.1 -20"
+                rock-grabbable="rockId: basalt">
+
+        <!-- Actual rock mesh (small + clickable) -->
+        <a-entity class="interactive"
+                  gltf-model="#basaltRock"
+                  scale="0.001 0.001 0.001">
+        </a-entity>
+
+        <!-- Floating hint above the rock (normal scale) -->
+        <a-entity class="collect-hint"
+                  position="0 1 0"
+                  text="value: Click to collect;
+                        align: center;
+                        width: 2;
+                        color: #ffd480;"
+                  animation="property: position;
+                            dir: alternate;
+                            dur: 900;
+                            easing: easeInOutSine;
+                            to: 0 1.2 0;
+                            loop: true;">
+        </a-entity>
+      </a-entity>
+
+
+      <!-- Lab inventory / analysis console (popup) -->
+      <a-entity id="inventoryPanel"
+                position="-3.6 1.4 -1.34"
+                rotation="0 90 0"
+                visible="false">
+
+        <!-- Background card -->
+        <a-plane width="2" height="1.2"
+                material="color: #111; opacity: 0.9; side: double">
+        </a-plane>
+
+        <!-- Title -->
+        <a-entity position="-0.9 0.45 0.01"
+                  text="value: Lab Console;
+                        align: left;
+                        width: 2;
+                        color: #00e5ff;">
+        </a-entity>
+
+        <!-- Question -->
+        <a-entity position="-0.9 0.2 0.01"
+                  text="value: What mineral would you like to analyze?;
+                        align: left;
+                        width: 1.8;
+                        wrapCount: 30;
+                        color: #ffffff;">
+        </a-entity>
+
+        <!-- List of collected items (left column) -->
+        <a-entity id="inventoryList"
+                  position="-0.9 -0.05 0.01"
+                  text="value: Collected: (none);
+                        align: left;
+                        width: 1.8;
+                        wrapCount: 30;
+                        color: #cccccc;">
+        </a-entity>
+
+        <!-- Basalt option button (below list, same plane) -->
+        <a-entity id="basaltOption"
+                  class="interactive"
+                  position="-0.7 -0.35 0.01"
+                  geometry="primitive: box; width: 0.6; height: 0.18; depth: 0.02;"
+                  material="color: #263238"
+                  lab-mineral-button="mineralId: basalt">
+          <a-entity position="0 0 0.01"
+                    text="value: Basalt;
+                          align: center;
+                          width: 0.8;
+                          color: #ffffff;">
+          </a-entity>
+        </a-entity>
+
+        <!-- Analysis result / status text (right column) -->
+        <a-entity id="analysisText"
+                  position="0.05 -0.05 0.01"
+                  text="value: Select a mineral to analyze.;
+                        align: left;
+                        width: 1.1;
+                        wrapCount: 30;
+                        color: #ffffff;">
+        </a-entity>
+      </a-entity>
+
+
+
+      <!-- Lab table for analysis / inventory station -->
+      <a-entity id="labTable"
+                position="-4.41 0.71 -1.34"
+                rotation="0 90 0"
+                scale="0.8 0.8 0.8"
+                gltf-model="#sciFiTable">
+
+        <!-- Small Inventory button on the table surface -->
+        <a-entity id="inventoryButton"
+                  class="interactive"
+                  position="0.982 0.056 0"
+                  geometry="primitive: cylinder; radius: 0.07; height: 0.04;"
+                  material="color: #00bcd4"
+                  inventory-button
+                  animation__hover="property: material.color; type: color; to: #26ffff; startEvents: mouseenter; dur: 150"
+                  animation__hoverout="property: material.color; type: color; to: #00bcd4; startEvents: mouseleave; dur: 150"
+                  animation__press="property: position;
+                            from: 0.982 0.056 0;
+                            to:   0.982 0.02  0;
+                            dir: alternate;
+                            loop: 1;
+                            startEvents: click;
+                            dur: 120">
+        </a-entity>
+
+        <!-- Little label above the button -->
+        <a-entity position="0 1.05 0"
+                  text="value: Inventory;
+                        align: center;
+                        width: 2;
+                        color: #ffffff;">
+        </a-entity>
+      </a-entity>
+
 
             <!-- Jupiter teleport button near rear wall -->
       <a-entity id="jupiterButton" position="0 0 4.6">

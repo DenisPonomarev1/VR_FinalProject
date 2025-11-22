@@ -184,6 +184,61 @@ AFRAME.registerComponent('fp-controls', {
     }
 });
 
+AFRAME.registerSystem('inventory', {
+    init: function () {
+        this.collected = new Set();
+        this._notifTimeout = null;
+    },
+
+    has: function (id) {
+        return this.collected.has(id);
+    },
+
+    add: function (id) {
+        if (this.collected.has(id)) {
+            // already had it
+            this.showNotification('Already collected: ' + this.prettyName(id));
+            return false;
+        }
+        this.collected.add(id);
+        this.updatePanel();
+        this.showNotification('Collected: ' + this.prettyName(id) + ' rock');
+        return true;
+    },
+
+    prettyName: function (id) {
+        if (!id) return '';
+        return id.charAt(0).toUpperCase() + id.slice(1);
+    },
+
+    getListString: function () {
+        if (this.collected.size === 0) return '(none)';
+        return Array.from(this.collected)
+                    .map(id => this.prettyName(id))
+                    .join(', ');
+    },
+
+    updatePanel: function () {
+        const listEl = document.querySelector('#inventoryList');
+        if (!listEl) return;
+        listEl.setAttribute('text', 'value', 'Collected: ' + this.getListString());
+    },
+    
+    showNotification: function (msg) {
+        const notif = document.querySelector('#notificationText');
+        if (!notif) return;
+
+        notif.setAttribute('text', 'value', msg);
+        notif.setAttribute('visible', true);
+
+        if (this._notifTimeout) {
+            clearTimeout(this._notifTimeout);
+        }
+        this._notifTimeout = setTimeout(() => {
+            notif.setAttribute('visible', false);
+        }, 1500);
+    }
+});
 
 
 AFRAME.registerComponent('interactive-door', {
@@ -271,3 +326,194 @@ AFRAME.registerComponent('scene-link', {
         });
     }
 });
+
+AFRAME.registerComponent('rock-grabbable', {
+    schema: {
+        rockId: { type: 'string', default: 'rock' }
+    },
+
+    init: function () {
+        this.isHeld = false;
+        this.hasBeenCollected = false;
+
+        // Access the inventory system attached to the scene
+        this.inventory = this.el.sceneEl.systems['inventory'];
+
+        // Prefer right hand, then left, then camera as fallback
+        this.hand = document.querySelector('#rightHand')
+                || document.querySelector('#leftHand')
+                || document.querySelector('#camera');
+
+        this.camera = document.querySelector('#camera');
+        this.scene  = this.el.sceneEl;
+
+        this.onClick = this.onClick.bind(this);
+        this.el.addEventListener('click', this.onClick);
+    },
+
+    remove: function () {
+        this.el.removeEventListener('click', this.onClick);
+    },
+
+    onClick: function () {
+        // First time we click it, mark as collected in inventory
+        if (!this.hasBeenCollected && this.inventory) {
+            const added = this.inventory.add(this.data.rockId);
+            if (added) {
+                this.hasBeenCollected = true;
+                // Hide the floating hint above the rock
+                const hint = this.el.querySelector('.collect-hint');
+                if (hint) hint.setAttribute('visible', false);
+            }
+        }
+
+        // Then toggle pick up / drop behaviour
+        if (!this.isHeld) {
+            this.pickUp();
+        } else {
+            this.drop();
+        }
+    },
+
+    // Attach rock to hand and keep it just in front of controller
+    pickUp: function () {
+        if (!this.hand) { return; }
+
+        this.hand.appendChild(this.el);
+
+        // local offset from the hand: 30cm in front
+        this.el.setAttribute('position', '0 0 -0.3');
+        this.el.setAttribute('rotation', '0 0 0');
+
+        this.isHeld = true;
+    },
+
+    // Drop rock on the ground in front of the camera (e.g., inside the hub)
+    drop: function () {
+        if (!this.camera) { return; }
+
+        const camObj = this.camera.object3D;
+
+        // Direction the camera is facing
+        const forward = new THREE.Vector3(0, 0, -1);
+        const camQuat = new THREE.Quaternion();
+        camObj.getWorldQuaternion(camQuat);
+        forward.applyQuaternion(camQuat);
+        forward.setLength(1.0); // 1 meter ahead
+
+        const camPos = new THREE.Vector3();
+        camObj.getWorldPosition(camPos);
+
+        const dropPos = camPos.add(forward);
+        dropPos.y = 0.1; // on the ground
+
+        // Re-parent to scene so it stops following the hand
+        this.scene.appendChild(this.el);
+
+        // Place it in world space
+        this.el.object3D.position.copy(dropPos);
+
+        this.isHeld = false;
+    }
+});
+
+AFRAME.registerComponent('inventory-button', {
+    init: function () {
+        this.panel = document.querySelector('#inventoryPanel');
+        this.inventory = this.el.sceneEl.systems['inventory'];
+        this.isOpen = false;
+
+        this.onClick = this.onClick.bind(this);
+        this.el.addEventListener('click', this.onClick);
+    },
+
+    remove: function () {
+        this.el.removeEventListener('click', this.onClick);
+    },
+
+    onClick: function () {
+        if (!this.panel) return;
+
+        this.isOpen = !this.isOpen;
+        this.panel.setAttribute('visible', this.isOpen);
+
+        // Refresh the collected list when opening
+        if (this.isOpen && this.inventory && this.inventory.updatePanel) {
+            this.inventory.updatePanel();
+
+            const analysisEl = document.querySelector('#analysisText');
+            if (analysisEl) {
+                analysisEl.setAttribute(
+                    'text',
+                    'value',
+                    'Select a mineral to analyze.'
+                );
+            }
+        }
+    }
+});
+
+AFRAME.registerComponent('lab-mineral-button', {
+    schema: {
+        mineralId: { type: 'string', default: 'unknown' }
+    },
+
+    init: function () {
+        this.inventory = this.el.sceneEl.systems['inventory'];
+        this.analysisEl = document.querySelector('#analysisText');
+        this._timeout = null;
+
+        this.onClick = this.onClick.bind(this);
+        this.el.addEventListener('click', this.onClick);
+    },
+
+    remove: function () {
+        this.el.removeEventListener('click', this.onClick);
+        if (this._timeout) clearTimeout(this._timeout);
+    },
+
+    onClick: function () {
+        if (!this.inventory) return;
+
+        const id = this.data.mineralId;
+        const pretty = this.inventory.prettyName(id);
+
+        // If not collected, show a message and bail
+        if (!this.inventory.has(id)) {
+            this.inventory.showNotification(
+                'You haven\'t collected ' + pretty + ' yet.'
+            );
+            if (this.analysisEl) {
+                this.analysisEl.setAttribute(
+                    'text',
+                    'value',
+                    'You need to collect ' + pretty + ' before analyzing.'
+                );
+            }
+            return;
+        }
+
+        // If collected, start "analysis"
+        if (this.analysisEl) {
+            this.analysisEl.setAttribute(
+                'text',
+                'value',
+                'Analyzing ' + pretty + ' sample...'
+            );
+        }
+
+        if (this._timeout) clearTimeout(this._timeout);
+
+        // Fake 10s analysis, then show placeholder result
+        this._timeout = setTimeout(() => {
+            if (!this.analysisEl) return;
+            this.analysisEl.setAttribute(
+                'text',
+                'value',
+                pretty + ' analysis: Analysis text (placeholder).'
+            );
+        }, 10000); // 10 seconds
+    }
+});
+
+
