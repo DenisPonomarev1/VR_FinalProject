@@ -22,8 +22,8 @@
         <a-asset-item id="phobos" response-type="arraybuffer" src="assets/phobos.glb"></a-asset-item>
         <a-asset-item id="deimos" response-type="arraybuffer" src="assets/deimos_centered.glb"></a-asset-item>
         <a-asset-item id="basaltRock" response-type="arraybuffer" src="assets/basalt.glb"></a-asset-item>
+        <a-asset-item id="duniteRock" response-type="arraybuffer" src="assets/dunite.glb"></a-asset-item>
         <a-asset-item id="sciFiTable" response-type="arraybuffer" src="assets/sci-fi_table.glb"></a-asset-item>
-
 
         <img id="mars1" src="assets/mars1.jpg">
         <img id="mars2" src="assets/mars2.jpg">
@@ -227,7 +227,7 @@
 
       <!-- Collectible basalt rock outside the base -->
       <a-entity id="basaltRockRoot"
-                position="0 0.1 -20"
+                position="-20 0.1 -45"
                 rock-grabbable="rockId: basalt">
 
         <!-- Actual rock mesh (small + clickable) -->
@@ -252,10 +252,39 @@
         </a-entity>
       </a-entity>
 
+            <!-- Collectible basalt rock outside the base -->
+      <a-entity id="duniteRockRoot"
+                position="40 0.4 -20"
+                scale="5 5 5"
+                rock-grabbable="rockId: dunite">
+
+        <!-- Actual rock mesh (small + clickable) -->
+        <a-entity class="interactive"
+                  gltf-model="#duniteRock"
+                  scale="0.001 0.001 0.001">
+        </a-entity>
+
+        <!-- Floating hint above the rock (normal scale) -->
+        <a-entity class="collect-hint"
+                  position="0 0.2 0"
+                  scale="0.2 0.2 0.2"
+                  text="value: Click to collect;
+                        align: center;
+                        width: 2;
+                        color: #ffd480;"
+                  animation="property: position;
+                            dir: alternate;
+                            dur: 900;
+                            easing: easeInOutSine;
+                            to: 0 0.3 0;
+                            loop: true;">
+        </a-entity>
+      </a-entity>
+
 
       <!-- Lab inventory / analysis console (popup) -->
       <a-entity id="inventoryPanel"
-                position="-3.6 1.4 -1.34"
+                position="-4.84 1.4 -1.34"
                 rotation="0 90 0"
                 visible="false">
 
@@ -265,15 +294,33 @@
         </a-plane>
 
         <!-- Title -->
-        <a-entity position="-0.9 0.45 0.01"
+        <a-entity position="0.3 0.73 0.01"
                   text="value: Lab Console;
                         align: left;
                         width: 2;
-                        color: #00e5ff;">
+                        color: orange;">
         </a-entity>
 
+        <!-- Back / Return button (top-right of panel) -->
+        <a-entity id="backButton"
+                  class="interactive"
+                  visible="false"
+                  position="0.8 0.73 0.01"
+                  geometry="primitive: box; width: 0.35; height: 0.16; depth: 0.02;"
+                  material="color: #333"
+                  lab-back-button>
+          <a-entity position="0 0 0.01"
+                    text="value: Back;
+                          align: center;
+                          width: 0.8;
+                          color: #ffffff;">
+          </a-entity>
+        </a-entity>
+
+
         <!-- Question -->
-        <a-entity position="-0.9 0.2 0.01"
+        <a-entity id="mineralQuestion"
+                  position="0.23 0.4 0.01"
                   text="value: What mineral would you like to analyze?;
                         align: left;
                         width: 1.8;
@@ -281,25 +328,31 @@
                         color: #ffffff;">
         </a-entity>
 
-        <!-- List of collected items (left column) -->
-        <a-entity id="inventoryList"
-                  position="-0.9 -0.05 0.01"
-                  text="value: Collected: (none);
-                        align: left;
-                        width: 1.8;
-                        wrapCount: 30;
-                        color: #cccccc;">
-        </a-entity>
 
         <!-- Basalt option button (below list, same plane) -->
         <a-entity id="basaltOption"
                   class="interactive"
-                  position="-0.7 -0.35 0.01"
+                  position="-1.4 0.1 0.02"
                   geometry="primitive: box; width: 0.6; height: 0.18; depth: 0.02;"
                   material="color: #263238"
                   lab-mineral-button="mineralId: basalt">
           <a-entity position="0 0 0.01"
                     text="value: Basalt;
+                          align: center;
+                          width: 0.8;
+                          color: #ffffff;">
+          </a-entity>
+        </a-entity>
+
+        <!-- Dunite option button -->
+        <a-entity id="duniteOption"
+                  class="interactive"
+                  position="-1.4 -0.15 0.02"
+                  geometry="primitive: box; width: 0.6; height: 0.18; depth: 0.02;"
+                  material="color: #263238"
+                  lab-mineral-button="mineralId: dunite">
+          <a-entity position="0 0 0.01"
+                    text="value: Dunite;
                           align: center;
                           width: 0.8;
                           color: #ffffff;">
@@ -343,13 +396,35 @@
                             startEvents: click;
                             dur: 120">
         </a-entity>
+        </a-entity>
 
-        <!-- Little label above the button -->
-        <a-entity position="0 1.05 0"
-                  text="value: Inventory;
-                        align: center;
-                        width: 2;
-                        color: #ffffff;">
+
+      <!-- Inventory display shelf on the right wall -->
+      <a-entity id="inventoryShelf"
+                position="4.4 0.8 -1.5"
+                rotation="0 -90 0"
+                inventory-shelf>
+
+        <!-- Shelf board -->
+        <a-box position="0 0 0"
+              width="1.6" height="0.05" depth="0.4"
+              material="color: #444; metalness: 0.2; roughness: 0.8;">
+        </a-box>
+
+        <!-- Basalt display (hidden until collected) -->
+        <a-entity id="shelfBasalt"
+                  visible="false"
+                  position="-0.45 0.2 0"
+                  scale="0.25 0.25 0.25"
+                  gltf-model="#basaltRock">
+        </a-entity>
+
+        <!-- Dunite display (hidden until collected) -->
+        <a-entity id="shelfDunite"
+                  visible="false"
+                  position="0.45 0.2 0"
+                  scale="1.0 1.0 1.0"
+                  gltf-model="#duniteRock">
         </a-entity>
       </a-entity>
 

@@ -1,4 +1,3 @@
-// DEBUG VERSION --- First-person controls with simple wall collisions
 AFRAME.registerComponent('fp-controls', {
     schema: {
         speed:  { type: 'number', default: 3.5 },
@@ -184,6 +183,35 @@ AFRAME.registerComponent('fp-controls', {
     }
 });
 
+// Mineral analysis texts for the lab console
+const MINERAL_ANALYSIS_TEXT = {
+    basalt: (
+    'Basalt is a dark, fine-grained volcanic rock rich in iron and magnesium, about 90% of Mars is covered by basalts\n' +
+    'On Mars, many lava plains and much of the crust are basaltic, showing that the planet once had\n' +
+    'widespread volcanic eruptions and a hot, active interior.\n\n' +
+    'Key physical properties:\n' +
+    '- Typical color: dark gray to black\n' +
+    '- Density: ~2.8–3.0 g/cm³\n' +
+    '- Hardness: ~6 on the Mohs scale\n' +
+    '- Texture: fine-grained, often with tiny crystals\n' +
+    '- Main minerals: pyroxene, plagioclase feldspar, olivine'
+    ),
+
+    dunite: (
+    'Dunite is an ultramafic igneous rock made mostly of the mineral olivine.\n' +
+    'On Mars, olivine-rich dunite points to material that formed deep in the mantle or in very primitive lavas,\n' +
+    'preserving clues about the planet’s early interior and limited water-driven alteration.\n\n' +
+    'Key physical properties:\n' +
+    '- Typical color: olive green to dark green-brown\n' +
+    '- Density: ~3.2–3.4 g/cm³\n' +
+    '- Hardness: ~6.5–7 on the Mohs scale\n' +
+    '- Texture: coarse to granular, dominated by olivine crystals\n' +
+    '- Main minerals: >90% olivine, with minor pyroxene and spinel'
+    )
+
+};
+
+
 AFRAME.registerSystem('inventory', {
     init: function () {
         this.collected = new Set();
@@ -196,15 +224,25 @@ AFRAME.registerSystem('inventory', {
 
     add: function (id) {
         if (this.collected.has(id)) {
-            // already had it
-            this.showNotification('Already collected: ' + this.prettyName(id));
-            return false;
+                this.showNotification('Already collected: ' + this.prettyName(id));
+                return false;
         }
+
         this.collected.add(id);
         this.updatePanel();
         this.showNotification('Collected: ' + this.prettyName(id) + ' rock');
+
+        // Notify the scene so other components (like the shelf) can react
+        if (this.el) {                 // <-- this.el is the <a-scene> for systems
+            this.el.emit('inventory-changed', {
+                collected: Array.from(this.collected)
+            });
+        }
+
         return true;
-    },
+},
+
+
 
     prettyName: function (id) {
         if (!id) return '';
@@ -223,7 +261,7 @@ AFRAME.registerSystem('inventory', {
         if (!listEl) return;
         listEl.setAttribute('text', 'value', 'Collected: ' + this.getListString());
     },
-    
+
     showNotification: function (msg) {
         const notif = document.querySelector('#notificationText');
         if (!notif) return;
@@ -423,6 +461,11 @@ AFRAME.registerComponent('inventory-button', {
         this.inventory = this.el.sceneEl.systems['inventory'];
         this.isOpen = false;
 
+        // NEW: cache question + back button
+        this.questionEl = document.querySelector('#mineralQuestion');
+        this.backButtonEl = document.querySelector('#backButton');
+        this.analysisEl = document.querySelector('#analysisText');
+
         this.onClick = this.onClick.bind(this);
         this.el.addEventListener('click', this.onClick);
     },
@@ -437,13 +480,21 @@ AFRAME.registerComponent('inventory-button', {
         this.isOpen = !this.isOpen;
         this.panel.setAttribute('visible', this.isOpen);
 
-        // Refresh the collected list when opening
-        if (this.isOpen && this.inventory && this.inventory.updatePanel) {
-            this.inventory.updatePanel();
+        if (this.isOpen) {
+            // Refresh collected list if you have one
+            if (this.inventory && this.inventory.updatePanel) {
+                this.inventory.updatePanel();
+            }
 
-            const analysisEl = document.querySelector('#analysisText');
-            if (analysisEl) {
-                analysisEl.setAttribute(
+            // Reset UI to "choose a mineral" state
+            if (this.questionEl) {
+                this.questionEl.setAttribute('visible', true);
+            }
+            if (this.backButtonEl) {
+                this.backButtonEl.setAttribute('visible', false);
+            }
+            if (this.analysisEl) {
+                this.analysisEl.setAttribute(
                     'text',
                     'value',
                     'Select a mineral to analyze.'
@@ -453,6 +504,7 @@ AFRAME.registerComponent('inventory-button', {
     }
 });
 
+
 AFRAME.registerComponent('lab-mineral-button', {
     schema: {
         mineralId: { type: 'string', default: 'unknown' }
@@ -461,6 +513,8 @@ AFRAME.registerComponent('lab-mineral-button', {
     init: function () {
         this.inventory = this.el.sceneEl.systems['inventory'];
         this.analysisEl = document.querySelector('#analysisText');
+        this.questionEl = document.querySelector('#mineralQuestion');
+        this.backButtonEl = document.querySelector('#backButton');
         this._timeout = null;
 
         this.onClick = this.onClick.bind(this);
@@ -493,6 +547,14 @@ AFRAME.registerComponent('lab-mineral-button', {
             return;
         }
 
+        // Hide the "What mineral..." question, show Back button
+        if (this.questionEl) {
+            this.questionEl.setAttribute('visible', false);
+        }
+        if (this.backButtonEl) {
+            this.backButtonEl.setAttribute('visible', true);
+        }
+
         // If collected, start "analysis"
         if (this.analysisEl) {
             this.analysisEl.setAttribute(
@@ -504,15 +566,102 @@ AFRAME.registerComponent('lab-mineral-button', {
 
         if (this._timeout) clearTimeout(this._timeout);
 
-        // Fake 10s analysis, then show placeholder result
+        // Fake 10s analysis, then show result from lookup (or fallback)
         this._timeout = setTimeout(() => {
             if (!this.analysisEl) return;
+
+            const resultText =
+                (MINERAL_ANALYSIS_TEXT[id]) ||
+                (pretty + ' analysis data is not available yet.');
+
             this.analysisEl.setAttribute(
                 'text',
                 'value',
-                pretty + ' analysis: Analysis text (placeholder).'
+                resultText
             );
         }, 10000); // 10 seconds
+    }
+});
+
+AFRAME.registerComponent('lab-back-button', {
+    init: function () {
+        this.questionEl  = document.querySelector('#mineralQuestion');
+        this.analysisEl  = document.querySelector('#analysisText');
+        this.backButtonEl = document.querySelector('#backButton');
+
+        this.onClick = this.onClick.bind(this);
+        this.el.addEventListener('click', this.onClick);
+    },
+
+    remove: function () {
+        this.el.removeEventListener('click', this.onClick);
+    },
+
+    onClick: function () {
+        // Show the question again
+        if (this.questionEl) {
+            this.questionEl.setAttribute('visible', true);
+        }
+
+        // Reset analysis text
+        if (this.analysisEl) {
+            this.analysisEl.setAttribute(
+                'text',
+                'value',
+                'Select a mineral to analyze.'
+            );
+        }
+
+        // Hide the back button itself
+        if (this.backButtonEl) {
+            this.backButtonEl.setAttribute('visible', false);
+        }
+    }
+});
+
+AFRAME.registerComponent('inventory-shelf', {
+    init: function () {
+        // Get the inventory system
+        this.inventory = this.el.sceneEl.systems['inventory'];
+
+        // Cache references to the shelf rock slots
+        this.slots = {
+            basalt: this.el.querySelector('#shelfBasalt'),
+            dunite: this.el.querySelector('#shelfDunite')
+        };
+
+        // Bind handler
+        this.onInventoryChanged = this.onInventoryChanged.bind(this);
+
+        // Listen for inventory changes
+        this.el.sceneEl.addEventListener('inventory-changed', this.onInventoryChanged);
+
+        // Initial update (in case anything is already collected)
+        this.updateFromInventory();
+    },
+
+    remove: function () {
+        if (this.el.sceneEl) {
+            this.el.sceneEl.removeEventListener('inventory-changed', this.onInventoryChanged);
+        }
+    },
+
+    onInventoryChanged: function () {
+        this.updateFromInventory();
+    },
+
+    updateFromInventory: function () {
+        if (!this.inventory) return;
+
+        const hasBasalt = this.inventory.has('basalt');
+        const hasDunite = this.inventory.has('dunite');
+
+        if (this.slots.basalt) {
+            this.slots.basalt.setAttribute('visible', hasBasalt);
+        }
+        if (this.slots.dunite) {
+            this.slots.dunite.setAttribute('visible', hasDunite);
+        }
     }
 });
 
