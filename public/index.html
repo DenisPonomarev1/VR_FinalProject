@@ -27,6 +27,7 @@
         <a-asset-item id="hematiteRock" response-type="arraybuffer" src="assets/hematite.glb"></a-asset-item>
         <a-asset-item id="sciFiTable" response-type="arraybuffer" src="assets/sci-fi_table.glb"></a-asset-item>
 
+
         <img id="mars1" src="assets/mars1.jpg">
         <img id="mars2" src="assets/mars2.jpg">
         <img id="textBG_1" src="assets/textBG_1.jpg">
@@ -62,20 +63,20 @@
           </a-entity>
 
 
-      <!--  hands / lasers -->
-      <a-entity id="leftHand"
-                laser-controls="hand: left"
-                cursor="rayOrigin: entity; downEvents: triggerdown; upEvents: triggerup"
-                raycaster="objects: .interactive; far: 20;"
-                line="opacity: 0.9">
-      </a-entity>
+        <!-- LEFT HAND (movement + click) -->
+        <a-entity id="leftHand"
+                  laser-controls="hand: left"
+                  raycaster="objects: .interactive; far: 20; showLine: true"
+                  cursor="fuse: false; rayOrigin: entity; downEvents: triggerdown; upEvents: triggerup">
+        </a-entity>
 
-      <a-entity id="rightHand"
-                laser-controls="hand: right"
-                cursor="rayOrigin: entity; downEvents: triggerdown; upEvents: triggerup"
-                raycaster="objects: .interactive; far: 20;"
-                line="opacity: 0.9">
-      </a-entity>
+        <!-- RIGHT HAND (turning + click) -->
+        <a-entity id="rightHand"
+                  laser-controls="hand: right"
+                  raycaster="objects: .interactive; far: 20; showLine: true"
+                  cursor="fuse: false; rayOrigin: entity; downEvents: triggerdown; upEvents: triggerup">
+        </a-entity>
+
 
       </a-entity>
 
@@ -96,6 +97,7 @@
                       easing="easeInOutSine"
                       repeat="indefinite"></a-animation>
       </a-entity>
+
 
       <a-entity id="phobos" position="4 1.78 3" rotation="0 0 0" scale="0.03 0.03 0.03"
                 gltf-model="#phobos"
@@ -202,35 +204,127 @@
               width="3" height="0.2" depth="9"
               color="#b0b0b0"></a-box>
 
-      <!-- Doors with your interactive-door component -->
+      <!-- Doors with interactive-door component + wall buttons -->
+
+      <!-- OUTER DOOR -->
       <a-entity id="outerDoorHinge"
-                class="interactive"
-                position="1.5 0 -13.97"
-                rotation="0 0 0"
-                interactive-door="openAngle: -90; duration: 1000">
+                  position="1.5 0 -13.97"
+                  rotation="0 0 0"
+                  interactive-door="openAngle: -90; duration: 1000">
+
+        <!-- Door mesh (NOT interactive) -->
         <a-entity id="outerDoorModel"
                   gltf-model="#doorGLB"
-                  position="-1.5 2.326 0."
+                  ignore-raycast
+                  position="-1.5 2.326 0"
                   rotation="0 0 0"
                   scale="0.024 0.011 0.01">
         </a-entity>
       </a-entity>
 
-      <a-entity id="outerDoorHinge2"
-        position="1.5 0 -5.055"
-        interactive-door="
-          openAngle: -90; duration: 1000;
-          closedPos: 0.002 1.2 -5.055;     
-          openPos:   1.57  1.2 -6.084;       <!-- thin post offset to the right/back -->
-          closedSize: 3 2.4 0.05;
-          openSize:   0.05 2.4 3">
-        <a-entity id="outerDoorModel2"
-          gltf-model="#doorGLB"
-          position="-1.5 2.326 0.1"
-          rotation="0 0 0"
-          scale="0.024 0.011 0.01">
+      <!-- Buttons for OUTER DOOR -->
+      <a-entity id="outerDoorButtonInside"
+                class="interactive"
+                position="1.37 1.2 -12.63"
+                rotation="0 0 90"
+                geometry="primitive: cylinder; radius: 0.1; height: 0.05"
+                material="color: #00b894; metalness: 0.3; roughness: 0.5"
+                door-button="target: #outerDoorHinge">
+        <a-entity position="0.283 -0.023 0"
+                  rotation="-90 -90 0"
+                  text="value: OPEN;
+                        align: center;
+                        width: 1.5;
+                        color: #ffffff;">
         </a-entity>
       </a-entity>
+
+      <!-- Platform + button for OUTER DOOR (outside) -->
+      <a-entity id="outerDoorButtonOutsidePlatform"
+                position="-1.86 0 -14.4">
+
+        <!-- The little box it stands on -->
+        <a-entity position="0 0.3 0"
+                  geometry="primitive: box; width: 0.4; depth: 0.4; height: 0.3;"
+                  material="color: #ffffff; metalness: 0.1; roughness: 0.8;"
+                  shadow>
+        </a-entity>
+
+        <!-- The actual clickable button on top -->
+        <a-entity id="outerDoorButtonOutside"
+                  class="interactive"
+                  position="0 0.48 0"
+                  geometry="primitive: cylinder; radius: 0.1; height: 0.05"
+                  material="color: #00b894; metalness: 0.3; roughness: 0.5"
+                  door-button="target: #outerDoorHinge">
+          <a-entity position="0 0.2 0"
+                    rotation="0 180 0"
+                    text="value: OPEN;
+                          align: center;
+                          width: 1.5;
+                          color: #ffffff;">
+          </a-entity>
+        </a-entity>
+
+      </a-entity>
+
+
+
+      <!-- INNER DOOR -->
+      <a-entity id="innerDoorHinge"
+                position="1.5 0 -5.055"
+                interactive-door="
+                  openAngle: -90; duration: 1000;
+                  closedPos: 0.002 1.2 -5.055;
+                  openPos:   1.57  1.2 -6.084;
+                  closedSize: 3 2.4 0.05;
+                  openSize:   0.05 2.4 3">
+
+        <!-- Door mesh (NOT interactive) -->
+        <a-entity id="innerDoorModel"
+                  gltf-model="#doorGLB"
+                  ignore-raycast
+                  position="-1.5 2.326 0.1"
+                  rotation="0 0 0"
+                  scale="0.024 0.011 0.01">
+        </a-entity>
+      </a-entity>
+
+      <!-- Buttons for INNER DOOR -->
+      <a-entity id="innerDoorButtonInside"
+                class="interactive"
+                position="1.76 1.2 -4.868"
+                rotation="270 0 0"
+                geometry="primitive: cylinder; radius: 0.1; height: 0.05"
+                material="color: #0984e3; metalness: 0.3; roughness: 0.5"
+                door-button="target: #innerDoorHinge">
+        <a-entity position="-0.043 -0.11 0.2"
+                  rotation="90 0 0"
+                  text="value: OPEN;
+                        align: center;
+                        width: 1.5;
+                        color: #ffffff;">
+        </a-entity>
+      </a-entity>
+
+      <a-entity id="innerDoorButtonOutside"
+                class="interactive"
+                position="-1.33 1.2 -7.5"
+                rotation="0 0 90"
+                geometry="primitive: cylinder; radius: 0.1; height: 0.05"
+                material="color: #0984e3; metalness: 0.3; roughness: 0.5"
+                door-button="target: #innerDoorHinge">
+        <a-entity position="0.25 0.03 0"
+                  rotation="90 90 0"
+                  text="value: OPEN;
+                        align: center;
+                        width: 1.5;
+                        color: #ffffff;">
+        </a-entity>
+      </a-entity>
+
+
+
 
       <!-- Collectible basalt rock outside the base -->
       <a-entity id="basaltRockRoot"

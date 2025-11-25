@@ -330,8 +330,10 @@ AFRAME.registerComponent('interactive-door', {
         this.openCollider.setAttribute('visible', 'false');
         // not 'solid' initially
         this.el.sceneEl.appendChild(this.openCollider);
+        //Only the button works, not the click
+        //this.el.addEventListener('click', () => this.toggleDoor());
 
-        this.el.addEventListener('click', () => this.toggleDoor());
+        this.el.addEventListener('toggle-door', () => this.toggleDoor());
     },
 
     toggleDoor() {
@@ -357,6 +359,28 @@ AFRAME.registerComponent('interactive-door', {
         this.el.sceneEl.emit('solids-changed');
     }
 });
+
+AFRAME.registerComponent('door-button', {
+    schema: {
+        target: { type: 'selector' }  // the hinge entity, e.g. #outerDoorHinge
+    },
+
+    init: function () {
+        this.onClick = this.onClick.bind(this);
+        this.el.addEventListener('click', this.onClick);
+    },
+
+    remove: function () {
+        this.el.removeEventListener('click', this.onClick);
+    },
+
+    onClick: function () {
+        if (!this.data.target) return;
+        console.log('[door-button] toggling', this.data.target.id); //debugging
+        this.data.target.emit('toggle-door');
+    }
+});
+
 
 AFRAME.registerComponent('ignore-raycast', {
     init() {
@@ -682,4 +706,52 @@ AFRAME.registerComponent('inventory-shelf', {
     }
 });
 
+// Simple Mars facts for the terminal
+const MARS_FACTS = {
+  atmosphere:
+    'Mars has a thin atmosphere made mostly of carbon dioxide (~95%), with traces of nitrogen and argon. ' +
+    'The surface pressure is less than 1% of Earth’s, so liquid water is unstable on the surface.',
+
+  water:
+    'Today, most Martian water is locked up as ice in the polar caps and beneath the surface. ' +
+    'Ancient river channels and lakebeds show that Mars once had flowing liquid water billions of years ago.',
+
+  missions:
+    'Mars has been visited by many robotic missions, including orbiters, landers, and rovers. ' +
+    'Famous rovers include Spirit, Opportunity, Curiosity, Perseverance, and the tiny helicopter Ingenuity.'
+};
+
+AFRAME.registerComponent('mars-fact-button', {
+  schema: {
+    topic: { type: 'string', default: 'atmosphere' }
+  },
+
+  init: function () {
+    this.textPanel = document.querySelector('#marsFactsText');
+    this.onClick = this.onClick.bind(this);
+    this.el.addEventListener('click', this.onClick);
+  },
+
+  remove: function () {
+    this.el.removeEventListener('click', this.onClick);
+  },
+
+  onClick: function () {
+    if (!this.textPanel) return;
+    const topic = this.data.topic;
+    const txt = MARS_FACTS[topic] ||
+      'No data available for topic: ' + topic;
+
+    this.textPanel.setAttribute('text', 'value', txt);
+  }
+});
+
+
+AFRAME.registerComponent('debug-click-target', {
+    init: function () {
+        this.el.addEventListener('click', (e) => {
+            console.log('[CLICKED]', this.el.id, this.el.className);
+        });
+    }
+});
 
