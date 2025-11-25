@@ -33,6 +33,7 @@
         <img id="textBG_2" src="assets/textBG_2.jpg">
         <img id="textBG_3" src="assets/textBG_3.jpg">
         <img id="hubBG" src="assets/hubBG.png">
+        <a-asset-item id="olympusGLB" src="assets/mars_-_olympus_mons.glb"></a-asset-item>
       </a-assets>
 
       <!-- RIG that moves -->
@@ -534,6 +535,44 @@
                           color: #ffffff;">
           </a-entity>
 
+      <a-entity id="olympusMons"
+          gltf-model="#olympusGLB"
+          position="-68.44.9 1.471 -6.603"
+          scale="20 20 20"
+          rotation="1 0 0"
+          shadow
+          material="color: red">
+      </a-entity>
+        
+      <a-box class="solid"
+            position="-71.28 1.5 16.060" 
+            width="40"
+            height="5"
+            depth="1"
+            material="transparent: true; opacity: 0.0">
+      </a-box>
+      <a-box class="solid"
+            position="-71.67 1.5 -22.41"   
+            width="40"
+            height="5"
+            depth="1"
+            material="transparent: true; opacity: 0.0">
+      </a-box>
+      <a-box class="solid"
+            position="-90.51 1.5 -2.954"   
+            width="1"
+            height="5"
+            depth="40"
+            material="transparent: true; opacity: 0.0">
+      </a-box>
+      <a-box class="solid"
+            position="-51.619 1.5 -3.532"   
+            width="1"
+            height="5"
+            depth="40"
+            material="transparent: true; opacity: 0.0">
+      </a-box>
+      <!--material="transparent: true; opacity: 0.0"-->
 
 
 
