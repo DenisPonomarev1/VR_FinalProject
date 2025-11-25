@@ -207,7 +207,19 @@ const MINERAL_ANALYSIS_TEXT = {
     '- Hardness: ~6.5–7 on the Mohs scale\n' +
     '- Texture: coarse to granular, dominated by olivine crystals\n' +
     '- Main minerals: >90% olivine, with minor pyroxene and spinel'
-    )
+    ),
+
+    hematite: (
+    'Hematite is an iron oxide mineral (Fe₂O₃) that gives Mars much of its rusty-red color.\n' +
+    'On Mars, coarse hematite often forms in the presence of liquid water, such as in lakes,\n' +
+    'groundwater systems, or hot springs. Its presence is a strong clue that some regions once\n' +
+    'had standing or slowly moving water and more active chemical weathering.\n\n' +
+    'Key physical properties:\n' +
+    '- Typical color: metallic gray to reddish-brown\n' +
+    '- Streak: reddish\n' +
+    '- Density: ~5.0–5.3 g/cm³\n' +
+    '- Hardness: ~5.5–6.5 on the Mohs scale'
+)
 
 };
 
@@ -627,7 +639,8 @@ AFRAME.registerComponent('inventory-shelf', {
         // Cache references to the shelf rock slots
         this.slots = {
             basalt: this.el.querySelector('#shelfBasalt'),
-            dunite: this.el.querySelector('#shelfDunite')
+            dunite: this.el.querySelector('#shelfDunite'),
+            hematite: this.el.querySelector('#shelfHematite')
         };
 
         // Bind handler
@@ -655,12 +668,16 @@ AFRAME.registerComponent('inventory-shelf', {
 
         const hasBasalt = this.inventory.has('basalt');
         const hasDunite = this.inventory.has('dunite');
+        const hasHematite = this.inventory.has('hematite');
 
         if (this.slots.basalt) {
             this.slots.basalt.setAttribute('visible', hasBasalt);
         }
         if (this.slots.dunite) {
             this.slots.dunite.setAttribute('visible', hasDunite);
+        }
+        if (this.slots.hematite) {
+            this.slots.hematite.setAttribute('visible', hasHematite);
         }
     }
 });

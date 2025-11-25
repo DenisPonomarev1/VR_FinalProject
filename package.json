@@ -1,14 +1,23 @@
 {
-  "name": "lesson2_nodeaframeintro",
+  "name": "express",
   "version": "1.0.0",
-  "description": "",
+  "description": "\"# VR_FinalProject\"",
+  "homepage": "https://github.com/DenisPonomarev1/VR_FinalProject#readme",
+  "bugs": {
+    "url": "https://github.com/DenisPonomarev1/VR_FinalProject/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DenisPonomarev1/VR_FinalProject.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js"
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "express": "^4.21.2"
   }
