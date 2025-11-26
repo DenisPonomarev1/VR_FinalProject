@@ -27,6 +27,7 @@
         <a-asset-item id="hematiteRock" response-type="arraybuffer" src="assets/hematite.glb"></a-asset-item>
         <a-asset-item id="sciFiTable" response-type="arraybuffer" src="assets/sci-fi_table.glb"></a-asset-item>
         <a-asset-item id="olympusGLB" src="assets/mars_-_olympus_mons.glb"></a-asset-item>
+        <a-asset-item id="sojournerRover" response-type="arraybuffer" src="assets/sojournerRover.glb"></a-asset-item>
 
 
 
@@ -328,7 +329,7 @@
 
       <!-- MARS FACTS TERMINAL -->
       <a-entity id="marsFactsTerminal"
-                position="-2.5 1.4 -1.5"
+                position="-4.435 1.1 2.74"
                 rotation="0 90 0">
 
         <!-- Background panel -->
@@ -337,17 +338,17 @@
         </a-plane>
 
         <!-- Title -->
-        <a-entity position="-0.85 0.5 0.01"
+        <a-entity position="0.84 0.873 -0.24"
                   text="value: Mars Facts;
                         align: left;
                         width: 2.4;
-                        color: #ffb366;">
+                        color: #9a7432;">
         </a-entity>
 
         <!-- Topic buttons on the left -->
         <a-entity id="marsFactButtonAtmosphere"
                   class="interactive"
-                  position="-0.85 0.15 0.02"
+                  position="-1.52 0.15 0.02"
                   geometry="primitive: box; width: 0.7; height: 0.18; depth: 0.02;"
                   material="color: #263238"
                   mars-fact-button="topic: atmosphere">
@@ -361,7 +362,7 @@
 
         <a-entity id="marsFactButtonWater"
                   class="interactive"
-                  position="-0.85 -0.1 0.02"
+                  position="-1.52 -0.1 0.02"
                   geometry="primitive: box; width: 0.7; height: 0.18; depth: 0.02;"
                   material="color: #263238"
                   mars-fact-button="topic: water">
@@ -375,7 +376,7 @@
 
         <a-entity id="marsFactButtonMissions"
                   class="interactive"
-                  position="-0.85 -0.35 0.02"
+                  position="-1.52 -0.35 0.02"
                   geometry="primitive: box; width: 0.7; height: 0.18; depth: 0.02;"
                   material="color: #263238"
                   mars-fact-button="topic: missions">
@@ -389,12 +390,41 @@
 
         <!-- Text area on the right -->
         <a-entity id="marsFactsText"
-                  position="0.2 0 0.02"
+                  position="0 0 0.02"
                   text="value: Tap a topic to learn more about Mars.;
                         align: left;
                         width: 1.8;
                         wrapCount: 35;
                         color: #ffffff;">
+        </a-entity>
+      </a-entity>
+
+      <!-- Sojourner rover with quiz -->
+      <a-entity id="sojournerRoverRoot"
+                position="8 0.8 -25"
+                rover-quiz>   <!-- no scale here -->
+
+        <!-- Rover model (this is what you click) -->
+        <a-entity id="sojournerModel"
+                  gltf-model="#sojournerRover"
+                  position="0 0 0"
+                  rotation="0 30 0"
+                  scale="0.003 0.003 0.003"> <!-- moved scale here -->
+        </a-entity>
+
+        <!-- Floating hint above rover -->
+        <a-entity class="rover-hint"
+                  position="0 1.5 0"
+                  text="value: Click rover to learn more;
+                        align: center;
+                        width: 3;
+                        color: #ffd480;"
+                  animation="property: position;
+                            dir: alternate;
+                            dur: 1000;
+                            easing: easeInOutSine;
+                            to: 0 1.7 0;
+                            loop: true;">
         </a-entity>
       </a-entity>
 
@@ -694,7 +724,6 @@
                   material="color: #111; opacity: 0.9; side: double;">
           </a-plane>
 
-          <!-- Text: "Collected rocks" -->
           <a-entity position="0 0.3 3.99" rotation="0 180 0"
                     text="value: Jupiter;
                           align: center;

@@ -718,7 +718,8 @@ const MARS_FACTS = {
 
   missions:
     'Mars has been visited by many robotic missions, including orbiters, landers, and rovers. ' +
-    'Famous rovers include Spirit, Opportunity, Curiosity, Perseverance, and the tiny helicopter Ingenuity.'
+    'Famous rovers include Spirit, Opportunity, Curiosity, Perseverance, and the tiny helicopter Ingenuity. ' +
+    'Go and explore the planet to find some rovers and their story behind it'
 };
 
 AFRAME.registerComponent('mars-fact-button', {
@@ -747,11 +748,158 @@ AFRAME.registerComponent('mars-fact-button', {
 });
 
 
-AFRAME.registerComponent('debug-click-target', {
+AFRAME.registerComponent('rover-quiz', {
+    schema: {
+        title: { type: 'string', default: 'Sojourner – Mars Pathfinder (1997)' },
+        intro: {
+            type: 'string',
+            default:
+                'Sojourner was the first rover ever to operate on Mars.\n' +
+                'It was part of the Mars Pathfinder mission and tested rover technology\n' +
+                'while studying Martian rocks and soil near its landing site.'
+        }
+    },
+
     init: function () {
-        this.el.addEventListener('click', (e) => {
-            console.log('[CLICKED]', this.el.id, this.el.className);
+        const el = this.el;
+
+        // Find rover model (the clickable mesh)
+        this.roverModel = el.querySelector('[gltf-model]');
+        if (this.roverModel) {
+            // Make sure raycaster can hit it
+            this.roverModel.classList.add('interactive');
+        }
+
+        // Create info / quiz panel
+        const panel = document.createElement('a-entity');
+        panel.setAttribute('visible', 'false');
+        panel.setAttribute('position', '-2 1.2 0.6');   // above + in front of rover
+        panel.setAttribute('rotation', '-15 0 0');
+        this.panel = panel;
+
+        // Background
+        const bg = document.createElement('a-plane');
+        bg.setAttribute('width', 2.0);
+        bg.setAttribute('height', 1.5);
+        bg.setAttribute('material', 'color: #111; opacity: 0.9; side: double;');
+        panel.appendChild(bg);
+
+        // Title text
+        const titleEl = document.createElement('a-entity');
+        titleEl.setAttribute('position', '0 0.8 0.105');
+        titleEl.setAttribute('text', {
+            value: this.data.title,
+            align: 'center',
+            width: 2.4,
+            color: '#000000ff',
+            wrapCount: 28
         });
+        panel.appendChild(titleEl);
+
+        // Intro / explanation area (this will be reused after answer)
+        const introEl = document.createElement('a-entity');
+        introEl.setAttribute('position', '0 0.15 0.01');
+        introEl.setAttribute('text', {
+            value: this.data.intro,
+            align: 'left',
+            width: 1.9,
+            color: '#ffffff',
+            wrapCount: 36
+        });
+        panel.appendChild(introEl);
+        this.introEl = introEl;
+
+        // Question text
+        const questionEl = document.createElement('a-entity');
+        questionEl.setAttribute('position', '0 -0.5 0.127');
+        questionEl.setAttribute('text', {
+            value:
+                'The mission lasted a total of 83 days.\n' +
+                'How far do you think Sojourner drove in total?',
+            align: 'center',
+            width: 1.9,
+            color: '#ffd480',
+            wrapCount: 36
+        });
+        panel.appendChild(questionEl);
+        this.questionEl = questionEl;
+
+        // Create answer options (two rows of three)
+        this.createOption('10 m',   '10m',   -0.6, -1);
+        this.createOption('100 m',  '100m',   0.0, -1); // correct
+        this.createOption('1 km',   '1km',    0.6, -1);
+
+        this.createOption('10 km',  '10km',  -0.6, -1.35);
+        this.createOption('100 km', '100km',  0.0, -1.35);
+        this.createOption('1000 km','1000km', 0.6, -1.35);
+
+        // Attach panel to rover root
+        el.appendChild(panel);
+
+        // Clicking the rover model toggles panel visibility
+        this.onRoverClick = this.onRoverClick.bind(this);
+        if (this.roverModel) {
+            this.roverModel.addEventListener('click', this.onRoverClick);
+        }
+    },
+
+    createOption: function (label, value, x, y) {
+        const option = document.createElement('a-entity');
+        option.setAttribute('class', 'interactive rover-quiz-option');
+        option.setAttribute('geometry', 'primitive: box; width: 0.55; height: 0.22; depth: 0.03');
+        option.setAttribute('material', 'color: #263238');
+        option.setAttribute('position', `${x} ${y} 0.02`);
+        option.setAttribute('data-value', value);
+
+        const labelEl = document.createElement('a-entity');
+        labelEl.setAttribute('position', '0 0 0.02');
+        labelEl.setAttribute('text', {
+            value: label,
+            align: 'center',
+            width: 1.4,
+            color: '#ffffff'
+        });
+        option.appendChild(labelEl);
+
+        option.addEventListener('click', (evt) => {
+            // Prevent this click from also being treated as a rover click
+            evt.stopPropagation();
+            const chosen = option.getAttribute('data-value');
+            this.handleAnswer(chosen);
+        });
+
+        this.panel.appendChild(option);
+    },
+
+    onRoverClick: function () {
+        const visible = this.panel.getAttribute('visible');
+        this.panel.setAttribute('visible', !visible);
+    },
+
+    handleAnswer: function (value) {
+        const correctValue = '100m';
+        const isCorrect = (value === correctValue);
+
+        const explanation =
+            'Sojourner actually drove about 100 meters in total over 83 Martian days (sols).\n' +
+            'It spent most of its time stopping to take measurements and send data back to Earth,\n' +
+            'rather than driving continuously.\n\n' +
+            'Its top speed was only about 0.023 km/h (around 2.3 cm per second),\n' +
+            'so covering long distances was impossible for such an early test rover.';
+
+        const newText = (isCorrect
+            ? 'Correct! 🎉\n\n' + explanation
+            : 'Not quite.\n\n' + explanation
+        );
+
+        this.introEl.setAttribute('text', 'value', newText);
+    },
+
+    remove: function () {
+        if (this.roverModel && this.onRoverClick) {
+            this.roverModel.removeEventListener('click', this.onRoverClick);
+        }
     }
 });
+
 
