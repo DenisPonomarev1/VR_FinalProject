@@ -26,6 +26,9 @@
         <a-asset-item id="duniteRock" response-type="arraybuffer" src="assets/dunite.glb"></a-asset-item>
         <a-asset-item id="hematiteRock" response-type="arraybuffer" src="assets/hematite.glb"></a-asset-item>
         <a-asset-item id="sciFiTable" response-type="arraybuffer" src="assets/sci-fi_table.glb"></a-asset-item>
+        <a-asset-item id="olympusGLB" src="assets/mars_-_olympus_mons.glb"></a-asset-item>
+
+
 
 
         <img id="mars1" src="assets/mars1.jpg">
@@ -34,7 +37,6 @@
         <img id="textBG_2" src="assets/textBG_2.jpg">
         <img id="textBG_3" src="assets/textBG_3.jpg">
         <img id="hubBG" src="assets/hubBG.png">
-        <a-asset-item id="olympusGLB" src="assets/mars_-_olympus_mons.glb"></a-asset-item>
       </a-assets>
 
       <!-- RIG that moves -->
@@ -324,6 +326,77 @@
       </a-entity>
 
 
+      <!-- MARS FACTS TERMINAL -->
+      <a-entity id="marsFactsTerminal"
+                position="-2.5 1.4 -1.5"
+                rotation="0 90 0">
+
+        <!-- Background panel -->
+        <a-plane width="2.2" height="1.3"
+                material="color: #111; opacity: 0.9; side: double">
+        </a-plane>
+
+        <!-- Title -->
+        <a-entity position="-0.85 0.5 0.01"
+                  text="value: Mars Facts;
+                        align: left;
+                        width: 2.4;
+                        color: #ffb366;">
+        </a-entity>
+
+        <!-- Topic buttons on the left -->
+        <a-entity id="marsFactButtonAtmosphere"
+                  class="interactive"
+                  position="-0.85 0.15 0.02"
+                  geometry="primitive: box; width: 0.7; height: 0.18; depth: 0.02;"
+                  material="color: #263238"
+                  mars-fact-button="topic: atmosphere">
+          <a-entity position="0 0 0.01"
+                    text="value: Atmosphere;
+                          align: center;
+                          width: 0.9;
+                          color: #ffffff;">
+          </a-entity>
+        </a-entity>
+
+        <a-entity id="marsFactButtonWater"
+                  class="interactive"
+                  position="-0.85 -0.1 0.02"
+                  geometry="primitive: box; width: 0.7; height: 0.18; depth: 0.02;"
+                  material="color: #263238"
+                  mars-fact-button="topic: water">
+          <a-entity position="0 0 0.01"
+                    text="value: Water & Ice;
+                          align: center;
+                          width: 0.9;
+                          color: #ffffff;">
+          </a-entity>
+        </a-entity>
+
+        <a-entity id="marsFactButtonMissions"
+                  class="interactive"
+                  position="-0.85 -0.35 0.02"
+                  geometry="primitive: box; width: 0.7; height: 0.18; depth: 0.02;"
+                  material="color: #263238"
+                  mars-fact-button="topic: missions">
+          <a-entity position="0 0 0.01"
+                    text="value: Missions;
+                          align: center;
+                          width: 0.9;
+                          color: #ffffff;">
+          </a-entity>
+        </a-entity>
+
+        <!-- Text area on the right -->
+        <a-entity id="marsFactsText"
+                  position="0.2 0 0.02"
+                  text="value: Tap a topic to learn more about Mars.;
+                        align: left;
+                        width: 1.8;
+                        wrapCount: 35;
+                        color: #ffffff;">
+        </a-entity>
+      </a-entity>
 
 
       <!-- Collectible basalt rock outside the base -->
@@ -629,7 +702,29 @@
                           color: #ffffff;">
           </a-entity>
 
-      <a-entity id="olympusMons"
+
+
+
+      <!-- Mars landscape -->
+      <a-entity id="marsEnv"
+                position="0 0 0"
+                environment="
+                  preset: yavapai;
+                  groundColor: #b5651d;
+                  groundColor2: #e39c5b;
+                  horizonColor: #e2a36f;
+                  skyColor: #f6e5c0;
+                  lighting: distant;
+                  shadow: true;
+                  groundYScale: 1.8; 
+                  dressing: rocks;
+                  dressingAmount: 30;
+                  dressingColor: #a0522d;
+                  fog: 0.8;
+                  flatShading: true;">
+      </a-entity>
+
+            <a-entity id="olympusMons"
           gltf-model="#olympusGLB"
           position="-68.44.9 1.471 -6.603"
           scale="20 20 20"
@@ -668,30 +763,9 @@
       </a-box>
       <!--material="transparent: true; opacity: 0.0"-->
 
-
-
-      <!-- Mars landscape -->
-      <a-entity id="marsEnv"
-                position="0 0 0"
-                environment="
-                  preset: yavapai;
-                  groundColor: #b5651d;
-                  groundColor2: #e39c5b;
-                  horizonColor: #e2a36f;
-                  skyColor: #f6e5c0;
-                  lighting: distant;
-                  shadow: true;
-                  groundYScale: 1.8; 
-                  dressing: rocks;
-                  dressingAmount: 30;
-                  dressingColor: #a0522d;
-                  fog: 0.8;
-                  flatShading: true;">
-      </a-entity>
-
-      <!-- Lighting -->
-      <a-entity light="type: ambient; color: #BBB"></a-entity>
-      <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="2 6 1"></a-entity>
+        <!-- Lighting -->
+        <a-entity light="type: ambient; color: #BBB"></a-entity>
+        <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="2 6 1"></a-entity>
     </a-scene>
   </body>
 </html>
