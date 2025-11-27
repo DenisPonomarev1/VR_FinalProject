@@ -31,7 +31,7 @@
 
 
 
-
+        <img id="olympusOrbit" src="assets/olympus_orbit.jpg">
         <img id="mars1" src="assets/mars1.jpg">
         <img id="mars2" src="assets/mars2.jpg">
         <img id="textBG_1" src="assets/textBG_1.jpg">
@@ -401,15 +401,16 @@
 
       <!-- Sojourner rover with quiz -->
       <a-entity id="sojournerRoverRoot"
-                position="8 0.8 -25"
-                rover-quiz>   <!-- no scale here -->
+                position="26 0.8 38"
+                rotation="0 180 0"
+                rover-quiz>  
 
-        <!-- Rover model (this is what you click) -->
+        <!-- Rover model  -->
         <a-entity id="sojournerModel"
                   gltf-model="#sojournerRover"
                   position="0 0 0"
                   rotation="0 30 0"
-                  scale="0.003 0.003 0.003"> <!-- moved scale here -->
+                  scale="0.003 0.003 0.003"> 
         </a-entity>
 
         <!-- Floating hint above rover -->
@@ -521,12 +522,12 @@
                 visible="false">
 
         <!-- Background card -->
-        <a-plane width="2" height="1.2"
+        <a-plane width="2" height="1.5"
                 material="color: #111; opacity: 0.9; side: double">
         </a-plane>
 
         <!-- Title -->
-        <a-entity position="0.3 0.73 0.01"
+        <a-entity position="0.3 0.85 0.01"
                   text="value: Lab Console;
                         align: left;
                         width: 2;
@@ -537,7 +538,7 @@
         <a-entity id="backButton"
                   class="interactive"
                   visible="false"
-                  position="0.8 0.73 0.01"
+                  position="0.8 0.812 0.01"
                   geometry="primitive: box; width: 0.35; height: 0.16; depth: 0.02;"
                   material="color: #333"
                   lab-back-button>
@@ -753,46 +754,25 @@
                   flatShading: true;">
       </a-entity>
 
-            <a-entity id="olympusMons"
+      <a-entity id="olympusMons"
           gltf-model="#olympusGLB"
-          position="-68.44.9 1.471 -6.603"
-          scale="20 20 20"
-          rotation="1 0 0"
+          position="-68.449 1.471 -6.603"
+          scale="50 50 50"
           shadow
           material="color: red">
-      </a-entity>
-        
-      <a-box class="solid"
-            position="-71.28 1.5 16.060" 
-            width="40"
-            height="5"
-            depth="1"
-            material="transparent: true; opacity: 0.0">
-      </a-box>
-      <a-box class="solid"
-            position="-71.67 1.5 -22.41"   
-            width="40"
-            height="5"
-            depth="1"
-            material="transparent: true; opacity: 0.0">
-      </a-box>
-      <a-box class="solid"
-            position="-90.51 1.5 -2.954"   
-            width="1"
-            height="5"
-            depth="40"
-            material="transparent: true; opacity: 0.0">
-      </a-box>
-      <a-box class="solid"
-            position="-51.619 1.5 -3.532"   
-            width="1"
-            height="5"
-            depth="40"
-            material="transparent: true; opacity: 0.0">
-      </a-box>
-      <!--material="transparent: true; opacity: 0.0"-->
 
-        <!-- Lighting -->
+            <!-- Quiz anchor ON TOP OF THE MESH, AS CHILD -->
+            <a-entity id="olympusQuizAnchor"
+                      position="0 0.1 0.033"
+                      scale="0.02 0.02 0.02"
+                      geometry="primitive: box; width: 1; height: 1; depth: 1"
+                      material="color: yellow; opacity: 0.8"
+                      olympus-quiz>
+            </a-entity>
+      </a-entity>
+
+
+
         <a-entity light="type: ambient; color: #BBB"></a-entity>
         <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="2 6 1"></a-entity>
     </a-scene>

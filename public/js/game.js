@@ -17,15 +17,16 @@ AFRAME.registerComponent('fp-controls', {
         this.joy = { x: 0, y: 0 };
 
         // right-stick turn amount (continuous)
-        this.turnX = 0;                // -1..1
-        this.turnSpeed = THREE.MathUtils.degToRad(120); // 120°/s, tweak as you like
+        this.turnX = 0;               
+        this.turnSpeed = THREE.MathUtils.degToRad(120); 
 
         // walls
         this.walls = [];
         this.refreshWalls();
         this.el.sceneEl.addEventListener('solids-changed', () => this.refreshWalls());
 
-
+        this.groundRaycaster = new THREE.Raycaster();
+        this.groundMeshes = [];
 
         this.lastPadLog = 0;
 
@@ -74,12 +75,48 @@ AFRAME.registerComponent('fp-controls', {
             console.warn('[fp] ❌ did NOT find #rightHand — check your HTML id');
         }
 
+        // --- TERRAIN FOLLOW SETUP ---
+
+        // Helper to add all meshes from a root node
+        const addMeshesFrom = (root) => {
+            if (!root) return;
+            root.traverse(obj => {
+            if (obj.isMesh) {
+                this.groundMeshes.push(obj);
+            }
+            });
+        };
+
+        // 1) Environment ground (yavapai)
+        const env = document.querySelector('#marsEnv');
+        if (env && env.object3D) {
+            addMeshesFrom(env.object3D);
+        }
+
+        // 2) Olympus Mons – wait for model to load
+        const olympus = document.querySelector('#olympusMons');
+        if (olympus) {
+            // If the mesh is already there (sometimes it is):
+            const existing = olympus.getObject3D('mesh');
+            if (existing) {
+            addMeshesFrom(existing);
+            }
+
+            // Also listen for model-loaded in case it wasn't ready yet
+            olympus.addEventListener('model-loaded', (e) => {
+            console.log('[fp] olympus model-loaded, adding meshes');
+            addMeshesFrom(e.detail.model);
+            console.log('[fp] terrain meshes total:', this.groundMeshes.length);
+            });
+        }
+
+        console.log('[fp] initial terrain meshes:', this.groundMeshes.length);
+
         setTimeout(() => {
             this.refreshWalls();
         }, 200);
-        });
-    },
-
+      });
+},
     refreshWalls() {
         const solids = Array.from(document.querySelectorAll('.solid'));
         this.walls = solids.map(el => {
@@ -95,6 +132,30 @@ AFRAME.registerComponent('fp-controls', {
         });
         console.log('[fp] refreshWalls ->', this.walls.length, 'walls');
     },
+
+    updateHeightOnTerrain() {
+        if (!this.groundMeshes || this.groundMeshes.length === 0) return;
+
+        const pos = this.el.object3D.position;
+
+        // Cast from above player down to find ground
+        const origin = new THREE.Vector3(pos.x, pos.y + 20, pos.z);
+        const dir    = new THREE.Vector3(0, -1, 0);
+
+        this.groundRaycaster.set(origin, dir);
+
+        // true = recursive, so it checks children meshes too
+        const hits = this.groundRaycaster.intersectObjects(this.groundMeshes, true);
+        if (!hits || hits.length === 0) return;
+
+        const hitY = hits[0].point.y;
+
+        // Offset so the rig origin (feet) sits slightly above the surface
+        const footOffset = 0.0;   // try 0.05 if you see clipping
+        pos.y = hitY + footOffset;
+    },
+
+
 
     tick(time, deltaMs) {
         const dt    = Math.min(0.05, deltaMs / 1000);
@@ -163,7 +224,12 @@ AFRAME.registerComponent('fp-controls', {
 
         pos.x = resolved.x;
         pos.z = resolved.z;
+
+        // Follow the terrain height
+        this.updateHeightOnTerrain();
     },
+
+    
 
     resolveCollision(currX, currZ, nextX, nextZ, radius) {
         const intersectsAny = (x, z) => {
@@ -615,7 +681,7 @@ AFRAME.registerComponent('lab-mineral-button', {
                 'value',
                 resultText
             );
-        }, 10000); // 10 seconds
+        }, 7000); // 10 seconds
     }
 });
 
@@ -880,11 +946,15 @@ AFRAME.registerComponent('rover-quiz', {
         const correctValue = '100m';
         const isCorrect = (value === correctValue);
 
+        if (this.questionEl){
+            this.questionEl.setAttribute('visible', false);
+        }
+
         const explanation =
             'Sojourner actually drove about 100 meters in total over 83 Martian days (sols).\n' +
             'It spent most of its time stopping to take measurements and send data back to Earth,\n' +
             'rather than driving continuously.\n\n' +
-            'Its top speed was only about 0.023 km/h (around 2.3 cm per second),\n' +
+            'Its top speed was only about 0.023 km/h (around 6.39 mm per second),\n' +
             'so covering long distances was impossible for such an early test rover.';
 
         const newText = (isCorrect
@@ -902,4 +972,182 @@ AFRAME.registerComponent('rover-quiz', {
     }
 });
 
+AFRAME.registerComponent('olympus-quiz', {
+    init: function () {
+        const el = this.el;
+
+        // Keep track of answer buttons so we can remove/hide them later
+        this.options = [];
+
+        // --- QUIZ PANEL ---
+
+        const panel = document.createElement('a-entity');
+        panel.setAttribute('position', '0 1.5 0');
+        panel.setAttribute('rotation', '-15 0 0');
+        panel.setAttribute('visible', true);
+        this.panel = panel;
+
+        // Background 
+        const bg = document.createElement('a-plane');
+        bg.setAttribute('width', 2.6);
+        bg.setAttribute('height', 1.6);
+        bg.setAttribute('material', 'color: #111; opacity: 0.9; side: double;');
+        panel.appendChild(bg);
+
+        // Title
+        const titleEl = document.createElement('a-entity');
+        titleEl.setAttribute('position', '0 0.7 0.01');
+        titleEl.setAttribute('text', {
+            value: 'Olympus Mons Summit',
+            align: 'center',
+            width: 2.4,
+            color: '#ffd480',
+            wrapCount: 30
+        });
+        panel.appendChild(titleEl);
+
+        // Intro text
+        const introEl = document.createElement('a-entity');
+        introEl.setAttribute('position', '0 0.25 0.01');
+        introEl.setAttribute('text', {
+            value:
+                'You are standing on Olympus Mons, the largest volcano in the Solar System.\n' +
+                'It is a giant shield volcano with very gentle slopes, formed by long-lived\n' +
+                'lava flows that piled up over hundreds of millions of years.',
+            align: 'left',
+            width: 2.3,
+            color: '#ffffff',
+            wrapCount: 40
+        });
+        panel.appendChild(introEl);
+        this.introEl = introEl;
+
+        // Question text
+        const questionEl = document.createElement('a-entity');
+        questionEl.setAttribute('position', '0 -0.25 0.01');
+        questionEl.setAttribute('text', {
+            value: 'About how tall do you think is Olympus Mons compared to Mount Everest?',
+            align: 'center',
+            width: 2.3,
+            color: '#ffffff',
+            wrapCount: 36
+        });
+        panel.appendChild(questionEl);
+        this.questionEl = questionEl;
+
+        // Options 
+        this.createOption('About the same height', 'same', -0.9, -0.6);
+        this.createOption('About 3× higher',       '3x',    0.0, -0.6); // correct
+        this.createOption('About half as high',    'half',  0.9, -0.6);
+
+        // Attach the panel to the anchor
+        el.appendChild(panel);
+
+        // --- PHOTO PLANE (initially hidden) ---
+
+        const photoPlane = document.createElement('a-plane');
+        photoPlane.setAttribute('id', 'olympusPhotoPlane');
+
+        photoPlane.setAttribute('position', '0 3.3 0');  
+        photoPlane.setAttribute('width', 3);
+        photoPlane.setAttribute('height', 1.8);
+        photoPlane.setAttribute('visible', false);
+        photoPlane.setAttribute('material', {
+            color: '#000000',
+            opacity: 0,
+            transparent: true,
+            side: 'double'
+        });
+
+        el.appendChild(photoPlane);
+        this.photoPlane = photoPlane;
+    },
+
+    createOption: function (label, value, x, y) {
+        const option = document.createElement('a-entity');
+        option.setAttribute('class', 'interactive olympus-quiz-option');
+        option.setAttribute(
+            'geometry',
+            'primitive: box; width: 0.85; height: 0.25; depth: 0.03'
+        );
+        option.setAttribute(
+            'material',
+            'color: #263238; metalness: 0.2; roughness: 0.8;'
+        );
+        option.setAttribute('position', `${x} ${y} 0.02`);
+        option.setAttribute('data-value', value);
+
+        // Label
+        const labelEl = document.createElement('a-entity');
+        labelEl.setAttribute('position', '0 0 0.02');
+        labelEl.setAttribute('text', {
+            value: label,
+            align: 'center',
+            width: 1.8,
+            color: '#ffffff'
+        });
+        option.appendChild(labelEl);
+
+        option.addEventListener('click', (evt) => {
+            evt.stopPropagation();
+            const chosen = option.getAttribute('data-value');
+            this.handleAnswer(chosen);
+        });
+
+        this.panel.appendChild(option);
+
+        // Store for later removal
+        this.options.push(option);
+    },
+
+    handleAnswer: function (value) {
+        const correct = '3x';
+        const isCorrect = (value === correct);
+
+        const explanation =
+            'Olympus Mons is about 22 km tall — roughly 2.5 to 3 times higher\n' +
+            'than Mount Everest above sea level. It towers over the surrounding\n' +
+            'Martian plains and would completely dwarf any mountain on Earth.';
+
+        const prefix = isCorrect ? 'Correct! 🎉\n\n' : 'Nice try.\n\n';
+        const text = prefix + explanation + '\n\nLook up to see an orbital view!';
+
+        //Hide the initial intro text
+        if (this.introEl) {
+            this.introEl.setAttribute('visible', false);
+        }
+
+        // Move the question/explanation text up to where the intro was
+        if (this.questionEl) {
+            this.questionEl.setAttribute('position', '0 0 0.035'); 
+            this.questionEl.setAttribute('text', 'value', text);
+        }
+
+        // 3) Remove / hide the answer buttons once an answer is chosen
+        if (this.options && this.options.length) {
+            this.options.forEach(opt => {
+                if (opt.parentNode) {
+                    opt.parentNode.removeChild(opt);
+                }
+            });
+            this.options = [];
+        }
+
+        this.revealPhoto();
+    },
+
+    revealPhoto: function () {
+        if (!this.photoPlane) return;
+
+        // Make the plane visible and set the texture
+        this.photoPlane.setAttribute('visible', true);
+        this.photoPlane.setAttribute('material', {
+            src: '#olympusOrbit',
+            opacity: 1,
+            transparent: true,
+            side: 'double',
+            color: '#FFFFFF'
+        });
+    }
+});
 
