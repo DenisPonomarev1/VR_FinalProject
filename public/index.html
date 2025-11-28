@@ -25,9 +25,11 @@
         <a-asset-item id="basaltRock" response-type="arraybuffer" src="assets/basalt.glb"></a-asset-item>
         <a-asset-item id="duniteRock" response-type="arraybuffer" src="assets/dunite.glb"></a-asset-item>
         <a-asset-item id="hematiteRock" response-type="arraybuffer" src="assets/hematite.glb"></a-asset-item>
+        <a-asset-item id="gypsumRock" response-type="arraybuffer" src="assets/gypsum-centered.glb"></a-asset-item>
         <a-asset-item id="sciFiTable" response-type="arraybuffer" src="assets/sci-fi_table.glb"></a-asset-item>
         <a-asset-item id="olympusGLB" src="assets/mars_-_olympus_mons.glb"></a-asset-item>
         <a-asset-item id="sojournerRover" response-type="arraybuffer" src="assets/sojournerRover.glb"></a-asset-item>
+        <a-asset-item id="opportunityRover" response-type="arraybuffer" src="assets/opportunity.glb"></a-asset-item>
 
 
 
@@ -38,6 +40,8 @@
         <img id="textBG_2" src="assets/textBG_2.jpg">
         <img id="textBG_3" src="assets/textBG_3.jpg">
         <img id="hubBG" src="assets/hubBG.png">
+        <img id="opportunityTexture" src="assets/opportunityTexture.png">
+
       </a-assets>
 
       <!-- RIG that moves -->
@@ -60,7 +64,7 @@
                       text="value: ;
                             align: center;
                             width: 2;
-                            color: #00ff99;"
+                            color: #4fa84a;"
                       visible="false">
             </a-entity>
           </a-entity>
@@ -102,15 +106,16 @@
       </a-entity>
 
 
-      <a-entity id="phobos" position="4 1.78 3" rotation="0 0 0" scale="0.03 0.03 0.03"
+      <a-entity id="phobos" position="4 1.78 3" scale="0.03 0.03 0.03"
                 gltf-model="#phobos"
                 animation="property:rotation; to:0 360 0; loop:true; dur:30000"
                 shadow></a-entity>
 
-      <a-entity id="deimos" position="4.172 1.78 0.745" rotation="0 0 0" scale="0.0005 0.0005 0.0005"
+      <a-entity id="deimos" position="4.172 1.78 0.745" scale="0.0005 0.0005 0.0005"
                 gltf-model="#deimos"
                 animation="property:rotation; to:0 360 0; loop:true; dur:30000"
                 shadow></a-entity>
+
 
       <a-entity id="jupiter" position="0 1.78 4.6" rotation="0 0 0" scale="0.3 0.3 0.3"
                 gltf-model="#jupiter"
@@ -401,7 +406,7 @@
 
       <!-- Sojourner rover with quiz -->
       <a-entity id="sojournerRoverRoot"
-                position="26 0.8 38"
+                position="26 1.2 38"
                 rotation="0 180 0"
                 rover-quiz>  
 
@@ -428,6 +433,37 @@
                             loop: true;">
         </a-entity>
       </a-entity>
+
+      <!-- Opportunity rover with quiz and deployment animation -->
+      <a-entity id="opportunityRoverRoot"
+                position="36.5 0.14 -37.5"
+                opportunity-quiz>
+
+        <!-- Rover model -->
+        <a-entity id="opportunityModel"
+                  gltf-model="#opportunityRover"
+                  position="0 0 0"
+                  rotation="0 80 0"
+                  scale="1 1 1"
+                  opportunity-skin>
+        </a-entity>
+
+        <!-- Floating hint above rover -->
+        <a-entity class="rover-hint"
+                  position="-0.39 1.5 0.6"
+                  text="value: Click rover to learn about Opportunity;
+                        align: center;
+                        width: 3;
+                        color: #ffd480;"
+                  animation="property: position;
+                            dir: alternate;
+                            dur: 1000;
+                            easing: easeInOutSine;
+                            to: 0 1.7 0;
+                            loop: true;">
+        </a-entity>
+      </a-entity>
+
 
 
       <!-- Collectible basalt rock outside the base -->
@@ -489,7 +525,7 @@
       
       <!-- Collectible basalt rock-->
       <a-entity id="hematiteRockRoot"
-                position="0 0.1 -20"
+                position="43.6 0.1 18.4"
                 rock-grabbable="rockId: hematite">
 
         <!-- Actual rock mesh (small + clickable) -->
@@ -513,6 +549,35 @@
                             loop: true;">
         </a-entity>
       </a-entity>
+
+      <!-- Collectible gypsum rock -->
+      <a-entity id="gypsumRockRoot"
+                position="30 0.44 10"
+                rock-grabbable="rockId: gypsum">
+
+        <!-- Actual rock mesh (clickable) -->
+        <a-entity class="interactive"
+                  gltf-model="#gypsumRock"
+                  scale="0.1 0.1 0.1">
+        </a-entity>
+
+        <!-- Floating hint above the rock -->
+        <a-entity class="collect-hint"
+                  position="0 1 0"
+                  text="value: Click to collect;
+                        align: center;
+                        width: 2;
+                        color: #ffd480;"
+                  animation="property: position;
+                            dir: alternate;
+                            dur: 900;
+                            easing: easeInOutSine;
+                            to: 0 1.2 0;
+                            loop: true;">
+        </a-entity>
+      </a-entity>
+
+
 
 
       <!-- Lab inventory / analysis console (popup) -->
@@ -592,7 +657,7 @@
           </a-entity>
         </a-entity>
 
-                <!-- Dunite option button -->
+        <!-- Hematite option button -->
         <a-entity id="hematiteOption"
                   class="interactive"
                   position="-1.4 -0.4 0.02"
@@ -601,6 +666,21 @@
                   lab-mineral-button="mineralId: hematite">
           <a-entity position="0 0 0.01"
                     text="value: Hematite;
+                          align: center;
+                          width: 0.8;
+                          color: #ffffff;">
+          </a-entity>
+        </a-entity>
+
+        <!-- Gypsum option button -->
+        <a-entity id="gypsumOption"
+                  class="interactive"
+                  position="-1.4 0.35 0.02"
+                  geometry="primitive: box; width: 0.6; height: 0.18; depth: 0.02;"
+                  material="color: #263238"
+                  lab-mineral-button="mineralId: gypsum">
+          <a-entity position="0 0 0.01"
+                    text="value: Gypsum;
                           align: center;
                           width: 0.8;
                           color: #ffffff;">
@@ -660,7 +740,7 @@
         </a-box>
 
         <!-- Label panel above the shelf -->
-        <a-entity position="0 0.35 0.05">
+        <a-entity position="-1 0.35 0.05">
           <!-- Background panel -->
           <a-plane width="1.4" height="0.3" position ="0 0.4 0"
                   material="color: #111; opacity: 0.9; side: double;">
@@ -676,28 +756,47 @@
         </a-entity>
 
 
-        <!-- Basalt display (hidden until collected) -->
+        <!-- Basalt display -->
         <a-entity id="shelfBasalt"
-                  visible="false"
+                  class="interactive"
+                  shelf-rock-label="rockId: basalt"
                   position="0.02 0.005 0"
                   scale="0.0005 0.0005 0.0005"
                   gltf-model="#basaltRock">
         </a-entity>
 
-        <!-- Dunite display (hidden until collected) -->
+        <!-- Dunite display -->
         <a-entity id="shelfDunite"
-                  visible="false"
+                  class="interactive"
+                  shelf-rock-label="rockId: dunite"
                   position="0.6 0.21 -0.025"
                   scale="0.003 0.003 0.003"
                   gltf-model="#duniteRock">
         </a-entity>
 
-        <!-- Hematite display (hidden until collected) -->
+        <!-- Hematite display -->
         <a-entity id="shelfHematite"
-                  visible="false"
+                  class="interactive"
+                  shelf-rock-label="rockId: hematite"
                   position="-0.50 0.035 -0.025"
                   scale="1 1 1"
                   gltf-model="#hematiteRock">
+        </a-entity>
+
+
+        <!-- SECOND SHELF BOARD (slightly left) -->
+        <a-box position="-1.7 0 0"
+              width="1.6" height="0.05" depth="0.4"
+              material="color: #444; metalness: 0.2; roughness: 0.8;">
+        </a-box>
+
+        <!-- Gypsum display sitting left shelf -->
+        <a-entity id="shelfGypsum"
+                  class="interactive"
+                  shelf-rock-label="rockId: gypsum"
+                  position="-1.7 0.07 -0.02"
+                  scale="0.05 0.05 0.05"
+                  gltf-model="#gypsumRock">
         </a-entity>
       </a-entity>
 

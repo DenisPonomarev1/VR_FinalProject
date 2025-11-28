@@ -285,7 +285,18 @@ const MINERAL_ANALYSIS_TEXT = {
     '- Streak: reddish\n' +
     '- Density: ~5.0–5.3 g/cm³\n' +
     '- Hardness: ~5.5–6.5 on the Mohs scale'
-)
+),
+
+gypsum: (
+        'Gypsum is a hydrated calcium sulfate mineral (CaSO₄·2H₂O) that almost always forms in the presence of water.\n' +
+        'On Mars, gypsum veins and layers suggest that mineral-rich water once moved through cracks and sediments,\n' +
+        'then slowly evaporated, leaving behind these bright deposits.\n\n' +
+        'Key physical properties:\n' +
+        '- Typical color: white to translucent, sometimes pale yellow or gray\n' +
+        '- Hardness: ~2 on the Mohs scale (very soft — you can scratch it with a fingernail)\n' +
+        '- Density: ~2.3 g/cm³\n' +
+        '- Often forms veins, nodules, or layered deposits from evaporating water'
+    )
 
 };
 
@@ -728,9 +739,10 @@ AFRAME.registerComponent('inventory-shelf', {
 
         // Cache references to the shelf rock slots
         this.slots = {
-            basalt: this.el.querySelector('#shelfBasalt'),
-            dunite: this.el.querySelector('#shelfDunite'),
-            hematite: this.el.querySelector('#shelfHematite')
+            basalt:   this.el.querySelector('#shelfBasalt'),
+            dunite:   this.el.querySelector('#shelfDunite'),
+            hematite: this.el.querySelector('#shelfHematite'),
+            gypsum:   this.el.querySelector('#shelfGypsum') 
         };
 
         // Bind handler
@@ -739,7 +751,7 @@ AFRAME.registerComponent('inventory-shelf', {
         // Listen for inventory changes
         this.el.sceneEl.addEventListener('inventory-changed', this.onInventoryChanged);
 
-        // Initial update (in case anything is already collected)
+        // Initial update
         this.updateFromInventory();
     },
 
@@ -753,24 +765,88 @@ AFRAME.registerComponent('inventory-shelf', {
         this.updateFromInventory();
     },
 
+    // helper to apply faded/solid material
+    setSlotOpacity: function (slotEl, hasRock) {
+        if (!slotEl) return;
+
+        const opacity = hasRock ? 1.0 : 0.3; // 10% ghost, 100% when collected
+
+        // always visible so player sees the ghost
+        slotEl.setAttribute('visible', true);
+
+        const apply = () => {
+            const mesh = slotEl.getObject3D('mesh');
+            if (!mesh) return;
+
+            mesh.traverse(node => {
+                if (!node.isMesh || !node.material) return;
+
+                const materials = Array.isArray(node.material)
+                    ? node.material
+                    : [node.material];
+
+                materials.forEach(m => {
+                    m.opacity = opacity;
+                    m.transparent = opacity < 1.0;
+                });
+            });
+        };
+
+        // model might not yet be loaded when this runs
+        if (slotEl.getObject3D('mesh')) {
+            apply();
+        } else {
+            slotEl.addEventListener('model-loaded', apply, { once: true });
+        }
+    },
+
     updateFromInventory: function () {
         if (!this.inventory) return;
 
-        const hasBasalt = this.inventory.has('basalt');
-        const hasDunite = this.inventory.has('dunite');
-        const hasHematite = this.inventory.has('hematite');
+        Object.keys(this.slots).forEach(id => {
+            const slot = this.slots[id];
+            if (!slot) return;
 
-        if (this.slots.basalt) {
-            this.slots.basalt.setAttribute('visible', hasBasalt);
+            const hasRock = this.inventory.has(id);
+            this.setSlotOpacity(slot, hasRock);
+        });
+    }
+});
+
+AFRAME.registerComponent('shelf-rock-label', {
+    schema: {
+        rockId: { type: 'string', default: 'rock' }
+    },
+
+    init: function () {
+        // Grab the inventory system so we can reuse prettyName() + showNotification()
+        this.inventory = this.el.sceneEl.systems['inventory'];
+
+        this.onClick = this.onClick.bind(this);
+        this.el.addEventListener('click', this.onClick);
+    },
+
+    remove: function () {
+        this.el.removeEventListener('click', this.onClick);
+    },
+
+    onClick: function () {
+        const id = this.data.rockId || 'rock';
+        let name = id;
+
+        if (this.inventory && this.inventory.prettyName) {
+            name = this.inventory.prettyName(id);
         }
-        if (this.slots.dunite) {
-            this.slots.dunite.setAttribute('visible', hasDunite);
-        }
-        if (this.slots.hematite) {
-            this.slots.hematite.setAttribute('visible', hasHematite);
+
+        // Show it in the HUD notification if available
+        if (this.inventory && this.inventory.showNotification) {
+            this.inventory.showNotification(name);
+        } else {
+            console.log('Shelf rock:', name);
         }
     }
 });
+
 
 // Simple Mars facts for the terminal
 const MARS_FACTS = {
@@ -1149,5 +1225,314 @@ AFRAME.registerComponent('olympus-quiz', {
             color: '#FFFFFF'
         });
     }
+});
+
+
+AFRAME.registerComponent('opportunity-quiz', {
+    schema: {
+        title: {
+            type: 'string',
+            default: 'Opportunity – Mars Exploration Rover (2004 to 2018)'
+        },
+        intro: {
+            type: 'string',
+            default:
+                'Opportunity was one of NASA\'s Mars Exploration Rovers.\n' +
+                'It landed in 2004 and far outlived its 90-day design life,\n' +
+                'exploring Mars for almost 15 years. It found strong evidence\n' +
+                'for past water, including hematite “blueberries” and sulfate-rich rocks.'
+        }
+    },
+
+    init: function () {
+        const el = this.el;
+
+        // Find rover model (the clickable mesh)
+        this.roverModel = el.querySelector('[gltf-model]');
+        if (this.roverModel) {
+            this.roverModel.classList.add('interactive');
+        }
+
+        // Grab the floating hint on top of the rover
+        this.hintEl = el.querySelector('.rover-hint');
+        this.hintHidden = false;
+
+        this.options = [];
+        this.panel = null;
+        this.playButton = null;
+
+        // Build quiz panel
+        this.buildPanel();
+
+        // Clicking the rover toggles panel visibility
+        this.onRoverClick = this.onRoverClick.bind(this);
+        if (this.roverModel) {
+            this.roverModel.addEventListener('click', this.onRoverClick);
+        }
+    },
+
+    buildPanel: function () {
+        const panel = document.createElement('a-entity');
+        panel.setAttribute('visible', false);
+        panel.setAttribute('position', '-2.67 1.78 1.3');
+        panel.setAttribute('rotation', '-15 0 0');
+        this.panel = panel;
+
+        // Background
+        const bg = document.createElement('a-plane');
+        bg.setAttribute('position', '-0.017 0.158 -0.059');
+        bg.setAttribute('width', 2.4);
+        bg.setAttribute('height', 1.9);
+        bg.setAttribute('material', 'color: #111; opacity: 0.9; side: double;');
+        panel.appendChild(bg);
+
+        // Title
+        const titleEl = document.createElement('a-entity');
+        titleEl.setAttribute('position', '0 1.2 0.09');
+        titleEl.setAttribute('text', {
+            value: this.data.title,
+            align: 'center',
+            width: 2.3,
+            color: '#1b1717ff',
+            wrapCount: 32
+        });
+        panel.appendChild(titleEl);
+
+        // Intro
+        const introEl = document.createElement('a-entity');
+        introEl.setAttribute('position', '0 0.3 0.01');
+        introEl.setAttribute('text', {
+            value: this.data.intro,
+            align: 'left',
+            width: 2.2,
+            color: '#ffffff',
+            wrapCount: 40
+        });
+        panel.appendChild(introEl);
+        this.introEl = introEl;
+
+        // Question
+        const questionEl = document.createElement('a-entity');
+        questionEl.setAttribute('position', '0 -0.33 -0.026');
+        questionEl.setAttribute('text', {
+            value:
+                'How did Opportunity reach the Martian surface during landing?',
+            align: 'center',
+            width: 2.2,
+            color: '#ffffff',
+            wrapCount: 36
+        });
+        panel.appendChild(questionEl);
+        this.questionEl = questionEl;
+
+        // Answer options (one row of three)
+        this.createOption('Airbags + parachute', 'airbags', -1.14, -0.7); // correct
+        this.createOption('Sky crane + cables', 'skycrane', -0.06, -0.7);
+        this.createOption('Powered landing on legs', 'legs', 0.953, -0.7);
+
+        // Play animation button (initially hidden)
+        const playButton = document.createElement('a-entity');
+        playButton.setAttribute('visible', false);
+        playButton.setAttribute('class', 'interactive');
+        playButton.setAttribute(
+            'geometry',
+            'primitive: box; width: 1.3; height: 0.3; depth: 0.03'
+        );
+        playButton.setAttribute(
+            'material',
+            'color: #2e7d32; metalness: 0.2; roughness: 0.6;'
+        );
+        playButton.setAttribute('position', '0 -1.15 0.02');
+
+        const playLabel = document.createElement('a-entity');
+        playLabel.setAttribute('position', '0 0 0.02');
+        playLabel.setAttribute('text', {
+            value: 'Play deployment animation',
+            align: 'center',
+            width: 2,
+            color: '#ffffff'
+        });
+        playButton.appendChild(playLabel);
+
+        playButton.addEventListener('click', () => {
+            this.playDeploymentAnimation();
+        });
+
+        panel.appendChild(playButton);
+        this.playButton = playButton;
+
+        // Attach panel to rover root
+        this.el.appendChild(panel);
+    },
+
+    createOption: function (label, value, x, y) {
+        const option = document.createElement('a-entity');
+        option.setAttribute('class', 'interactive opportunity-quiz-option');
+        option.setAttribute(
+            'geometry',
+            'primitive: box; width: 0.95; height: 0.25; depth: 0.03'
+        );
+        option.setAttribute(
+            'material',
+            'color: #263238; metalness: 0.2; roughness: 0.8;'
+        );
+        option.setAttribute('position', `${x} ${y} 0.02`);
+        option.setAttribute('data-value', value);
+
+        const labelEl = document.createElement('a-entity');
+        labelEl.setAttribute('position', '0 0 0.02');
+        labelEl.setAttribute('text', {
+            value: label,
+            align: 'center',
+            width: 1.8,
+            color: '#ffffff'
+        });
+        option.appendChild(labelEl);
+
+        option.addEventListener('click', (evt) => {
+            evt.stopPropagation();
+            const chosen = option.getAttribute('data-value');
+            this.handleAnswer(chosen);
+        });
+
+        this.panel.appendChild(option);
+        this.options.push(option);
+    },
+
+    onRoverClick: function () {
+        if (!this.panel) return;
+
+        // First click: hide the floating hint forever
+        if (!this.hintHidden && this.hintEl) {
+            this.hintEl.setAttribute('visible', false);
+            this.hintHidden = true;
+        }
+        const visible = this.panel.getAttribute('visible');
+        this.panel.setAttribute('visible', !visible);
+    },
+
+    handleAnswer: function (value) {
+        const correct = 'airbags';
+        const isCorrect = (value === correct);
+
+        const explanation =
+            'Opportunity landed using a heat shield, parachute, and large airbags.\n' +
+            'The lander hit the atmosphere at high speed, slowed by the parachute,\n' +
+            'then bounced and rolled across the Martian surface until it came to rest.\n' +
+            'Later rovers like Curiosity and Perseverance used a \"sky crane\" system instead.';
+
+        const prefix = isCorrect ? 'Correct! 🎉\n\n' : 'Nice try.\n\n';
+        const text = prefix + explanation + '\n\nYou can now play a deployment animation.';
+
+        if (this.introEl) {
+            this.introEl.setAttribute('visible', false);
+        }
+
+        if (this.questionEl) {
+            this.questionEl.setAttribute('position', '0 0.25 0.01');
+            this.questionEl.setAttribute('text', 'value', text);
+        }
+
+        // Remove answer buttons
+        if (this.options && this.options.length) {
+            this.options.forEach(opt => {
+                if (opt.parentNode) opt.parentNode.removeChild(opt);
+            });
+            this.options = [];
+        }
+
+        // Show "Play deployment animation" button
+        if (this.playButton) {
+            this.playButton.setAttribute('visible', true);
+        }
+    },
+
+    playDeploymentAnimation: function () {
+        if (!this.roverModel) return;
+
+        // Start glTF animation once, from the beginning.
+        // Requires aframe-extras (which you already include).
+        this.roverModel.setAttribute('animation-mixer', {
+            clip: '*',
+            loop: 'once',
+            timeScale: 1,
+            clampWhenFinished: true
+        });
+    },
+
+    remove: function () {
+        if (this.roverModel && this.onRoverClick) {
+            this.roverModel.removeEventListener('click', this.onRoverClick);
+        }
+    }
+});
+
+AFRAME.registerComponent('opportunity-skin', {
+  init: function () {
+    const el = this.el;
+
+    // Get the <img> asset that just gives us the path
+    const imgEl = document.querySelector('#opportunityTexture');
+    if (!imgEl) {
+      console.warn('[opportunity-skin] #opportunityTexture not found in DOM');
+      return;
+    }
+
+    const src = imgEl.getAttribute('src');
+    console.log('[opportunity-skin] using texture src:', src);
+
+    const loader = new THREE.TextureLoader();
+    this.texture = null;
+
+    // Load texture
+    loader.load(
+      src,
+      (texture) => {
+        console.log('[opportunity-skin] texture loaded');
+        this.texture = texture;
+        this.applyTexture();   // in case model is already loaded
+      },
+      undefined,
+      (err) => console.error('[opportunity-skin] texture load error', err)
+    );
+
+    // When the glTF model is ready, apply texture
+    el.addEventListener('model-loaded', () => {
+      console.log('[opportunity-skin] model-loaded fired');
+      this.applyTexture();
+    });
+  },
+
+  applyTexture: function () {
+    if (!this.texture) {
+      console.log('[opportunity-skin] applyTexture called but texture not ready yet');
+      return;
+    }
+
+    const mesh = this.el.getObject3D('mesh');
+    if (!mesh) {
+      console.log('[opportunity-skin] no mesh found on entity yet');
+      return;
+    }
+
+    console.log('[opportunity-skin] applying texture to mesh');
+
+    mesh.traverse(node => {
+      if (!node.isMesh || !node.material) return;
+
+      // Handle both single and multi-material
+      const materials = Array.isArray(node.material)
+        ? node.material
+        : [node.material];
+
+      materials.forEach(m => {
+        m.map = this.texture;
+        m.color.set('#ffffff');   // neutral base color
+        m.metalness = 0.2;
+        m.roughness = 0.9;
+        m.needsUpdate = true;
+      });
+    });
+  }
 });
 
