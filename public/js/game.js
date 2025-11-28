@@ -1004,9 +1004,10 @@ AFRAME.registerComponent('inventory-shelf', {
 
         // Cache references to the shelf rock slots
         this.slots = {
-            basalt: this.el.querySelector('#shelfBasalt'),
-            dunite: this.el.querySelector('#shelfDunite'),
-            hematite: this.el.querySelector('#shelfHematite')
+            basalt:   this.el.querySelector('#shelfBasalt'),
+            dunite:   this.el.querySelector('#shelfDunite'),
+            hematite: this.el.querySelector('#shelfHematite'),
+            gypsum:   this.el.querySelector('#shelfGypsum')
         };
 
         // Bind handler
@@ -1029,22 +1030,48 @@ AFRAME.registerComponent('inventory-shelf', {
         this.updateFromInventory();
     },
 
+    // Helper: set opacity on a glTF-based shelf rock
+    setSlotOpacity: function (slotEl, opacity) {
+        if (!slotEl) return;
+
+        const mesh = slotEl.getObject3D('mesh');
+        if (!mesh) {
+            // Model might not be loaded yet – wait for it
+            slotEl.addEventListener('model-loaded', () => {
+                this.setSlotOpacity(slotEl, opacity);
+            }, { once: true });
+            return;
+        }
+
+        mesh.traverse(node => {
+            if (!node.isMesh || !node.material) return;
+
+            const materials = Array.isArray(node.material)
+                ? node.material
+                : [node.material];
+
+            materials.forEach(m => {
+                m.transparent = opacity < 1;
+                m.opacity = opacity;
+                m.needsUpdate = true;
+            });
+        });
+    },
+
     updateFromInventory: function () {
         if (!this.inventory) return;
 
-        const hasBasalt = this.inventory.has('basalt');
-        const hasDunite = this.inventory.has('dunite');
+        const hasBasalt   = this.inventory.has('basalt');
+        const hasDunite   = this.inventory.has('dunite');
         const hasHematite = this.inventory.has('hematite');
+        const hasGypsum   = this.inventory.has('gypsum');
 
-        if (this.slots.basalt) {
-            this.slots.basalt.setAttribute('visible', hasBasalt);
-        }
-        if (this.slots.dunite) {
-            this.slots.dunite.setAttribute('visible', hasDunite);
-        }
-        if (this.slots.hematite) {
-            this.slots.hematite.setAttribute('visible', hasHematite);
-        }
+        // Before collected: 0.3 opacity
+        // After collected:  1.0 opacity
+        this.setSlotOpacity(this.slots.basalt,   hasBasalt   ? 1.0 : 0.3);
+        this.setSlotOpacity(this.slots.dunite,   hasDunite   ? 1.0 : 0.3);
+        this.setSlotOpacity(this.slots.hematite, hasHematite ? 1.0 : 0.3);
+        this.setSlotOpacity(this.slots.gypsum,   hasGypsum   ? 1.0 : 0.3);
     }
 });
 
@@ -2035,5 +2062,34 @@ AFRAME.registerComponent('lab-hint', {
         }
     }
 });
+
+AFRAME.registerComponent('shelf-rock-label', {
+    schema: {
+        rockId: { type: 'string', default: '' }
+    },
+
+    init: function () {
+        // Get the global inventory system
+        this.inventory = this.el.sceneEl.systems['inventory'];
+
+        this.onClick = this.onClick.bind(this);
+        this.el.addEventListener('click', this.onClick);
+    },
+
+    remove: function () {
+        this.el.removeEventListener('click', this.onClick);
+    },
+
+    onClick: function () {
+        // Just show the mineral name in the HUD, no floating label
+        if (this.inventory && this.inventory.showNotification) {
+            const pretty = this.inventory.prettyName(this.data.rockId);
+            const collected = this.inventory.has(this.data.rockId);
+            const suffix = collected ? '' : ' (not collected yet)';
+            this.inventory.showNotification(pretty + suffix);
+        }
+    }
+});
+
 
 
