@@ -10,6 +10,7 @@
 
     <script src="/js/spinning-effect.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
+    <script src="js/sound-manager.js"></script>
     <script src="js/game.js"></script>
     <style>
       html, body { margin:0; height:100%; background:#000; overflow:hidden; }
@@ -41,13 +42,33 @@
         <img id="textBG_3" src="assets/textBG_3.jpg">
         <img id="hubBG" src="assets/hubBG.png">
         <img id="opportunityTexture" src="assets/opportunityTexture.png">
-
+        
+        <!-- SOUND ASSETS  -->
+        <!-- Ambient sounds -->
+        <audio id="sndAmbientWindExt" src="sounds/427401_imjeax_desert-ambient-loop.wav"></audio>
+        <audio id="sndAmbientInterior" src="sounds/524951_burning-mir_space-ambient-v02.wav"></audio>
+        
+        <!-- Interaction sounds -->
+        <audio id="sndDoorOpen" src="sounds/468937_timothyd4y_closet-doorknob-turn.wav"></audio>
+        <audio id="sndFootstep" src="sounds/477394__nuff3__steps-dirt_3b.ogg"></audio>
+        <audio id="sndRockScan" src="sounds/735168__irolan__item-pickup-chime.wav"></audio>
+        <audio id="sndUIClick" src="sounds/677861__el_boss__ui-button-click.wav"></audio>
+        
+        <!-- Quiz sounds -->
+        <audio id="sndQuizCorrect" src="sounds/456162_bwg2020_correct-2.wav"></audio>
+        <audio id="sndQuizWrong" src="sounds/720893_baggonotes_incorrect_buzz.wav"></audio>
+        
+        <!-- Lab analysis sound -->
+        <audio id="sndLabAnalysis" src="sounds/340959_aceofspadesproduc100_scanning-...wav"></audio>
       </a-assets>
 
       <!-- RIG that moves -->
         <a-entity id="rig"
                   position="0 0 0"
-                  fp-controls="speed:3.5; radius:0.35">
+                  fp-controls="speed:3.5; radius:0.35"
+                  sound-manager
+                  footstep-sound="interval: 300"
+                  audio-zone-controller>
 
           <!-- HEAD / CAMERA: does looking + is at player height -->
 
@@ -109,6 +130,7 @@
       <a-entity id="phobos" position="4 1.78 3" scale="0.03 0.03 0.03"
                 gltf-model="#phobos"
                 animation="property:rotation; to:0 360 0; loop:true; dur:30000"
+                spatial-sound="src: sounds/524951__burning-mir__space-ambient-v02.wav; loop: true; volume: 0.3; refDistance: 1; maxDistance: 8"
                 shadow></a-entity>
 
       <a-entity id="deimos" position="4.172 1.78 0.745" scale="0.0005 0.0005 0.0005"
@@ -120,6 +142,7 @@
       <a-entity id="jupiter" position="0 1.78 4.6" rotation="0 0 0" scale="0.3 0.3 0.3"
                 gltf-model="#jupiter"
                 animation="property:rotation; to:0 360 0; loop:true; dur:30000"
+                spatial-sound="src: sounds/524951__burning-mir__space-ambient-v02.wav; loop: true; volume: 0.4; refDistance: 1.5; maxDistance: 10"
                 shadow></a-entity>
                   
       <a-entity id="phobos_info_panel" position="3.463 0.7 3.3" rotation="-30 -90 0">
@@ -218,7 +241,8 @@
       <a-entity id="outerDoorHinge"
                   position="1.5 0 -13.97"
                   rotation="0 0 0"
-                  interactive-door="openAngle: -90; duration: 1000">
+                  interactive-door="openAngle: -90; duration: 1000"
+                  door-sound>
 
         <!-- Door mesh (NOT interactive) -->
         <a-entity id="outerDoorModel"
@@ -237,7 +261,8 @@
                 rotation="0 0 90"
                 geometry="primitive: cylinder; radius: 0.1; height: 0.05"
                 material="color: #00b894; metalness: 0.3; roughness: 0.5"
-                door-button="target: #outerDoorHinge">
+                door-button="target: #outerDoorHinge"
+                ui-sound>
         <a-entity position="0.283 -0.023 0"
                   rotation="-90 -90 0"
                   text="value: OPEN;
@@ -264,7 +289,8 @@
                   position="0 0.48 0"
                   geometry="primitive: cylinder; radius: 0.1; height: 0.05"
                   material="color: #00b894; metalness: 0.3; roughness: 0.5"
-                  door-button="target: #outerDoorHinge">
+                  door-button="target: #outerDoorHinge"
+                  ui-sound>
           <a-entity position="0 0.2 0"
                     rotation="0 180 0"
                     text="value: OPEN;
@@ -286,7 +312,8 @@
                   closedPos: 0.002 1.2 -5.055;
                   openPos:   1.57  1.2 -6.084;
                   closedSize: 3 2.4 0.05;
-                  openSize:   0.05 2.4 3">
+                  openSize:   0.05 2.4 3"
+                  door-sound>
 
         <!-- Door mesh (NOT interactive) -->
         <a-entity id="innerDoorModel"
@@ -305,7 +332,8 @@
                 rotation="270 0 0"
                 geometry="primitive: cylinder; radius: 0.1; height: 0.05"
                 material="color: #0984e3; metalness: 0.3; roughness: 0.5"
-                door-button="target: #innerDoorHinge">
+                door-button="target: #innerDoorHinge"
+                ui-sound>
         <a-entity position="-0.043 -0.11 0.2"
                   rotation="90 0 0"
                   text="value: OPEN;
@@ -321,7 +349,8 @@
                 rotation="0 0 90"
                 geometry="primitive: cylinder; radius: 0.1; height: 0.05"
                 material="color: #0984e3; metalness: 0.3; roughness: 0.5"
-                door-button="target: #innerDoorHinge">
+                door-button="target: #innerDoorHinge"
+                ui-sound>
         <a-entity position="0.25 0.03 0"
                   rotation="90 90 0"
                   text="value: OPEN;
@@ -356,7 +385,8 @@
                   position="-1.52 0.15 0.02"
                   geometry="primitive: box; width: 0.7; height: 0.18; depth: 0.02;"
                   material="color: #263238"
-                  mars-fact-button="topic: atmosphere">
+                  mars-fact-button="topic: atmosphere"
+                  ui-sound>
           <a-entity position="0 0 0.01"
                     text="value: Atmosphere;
                           align: center;
@@ -370,7 +400,8 @@
                   position="-1.52 -0.1 0.02"
                   geometry="primitive: box; width: 0.7; height: 0.18; depth: 0.02;"
                   material="color: #263238"
-                  mars-fact-button="topic: water">
+                  mars-fact-button="topic: water"
+                  ui-sound>
           <a-entity position="0 0 0.01"
                     text="value: Water & Ice;
                           align: center;
@@ -384,7 +415,8 @@
                   position="-1.52 -0.35 0.02"
                   geometry="primitive: box; width: 0.7; height: 0.18; depth: 0.02;"
                   material="color: #263238"
-                  mars-fact-button="topic: missions">
+                  mars-fact-button="topic: missions"
+                  ui-sound>
           <a-entity position="0 0 0.01"
                     text="value: Missions;
                           align: center;
@@ -606,7 +638,8 @@
                   position="0.8 0.812 0.01"
                   geometry="primitive: box; width: 0.35; height: 0.16; depth: 0.02;"
                   material="color: #333"
-                  lab-back-button>
+                  lab-back-button
+                  ui-sound>
           <a-entity position="0 0 0.01"
                     text="value: Back;
                           align: center;
@@ -633,7 +666,8 @@
                   position="-1.4 0.1 0.02"
                   geometry="primitive: box; width: 0.6; height: 0.18; depth: 0.02;"
                   material="color: #263238"
-                  lab-mineral-button="mineralId: basalt">
+                  lab-mineral-button="mineralId: basalt"
+                  ui-sound>
           <a-entity position="0 0 0.01"
                     text="value: Basalt;
                           align: center;
@@ -648,7 +682,8 @@
                   position="-1.4 -0.15 0.02"
                   geometry="primitive: box; width: 0.6; height: 0.18; depth: 0.02;"
                   material="color: #263238"
-                  lab-mineral-button="mineralId: dunite">
+                  lab-mineral-button="mineralId: dunite"
+                  ui-sound>
           <a-entity position="0 0 0.01"
                     text="value: Dunite;
                           align: center;
@@ -663,7 +698,8 @@
                   position="-1.4 -0.4 0.02"
                   geometry="primitive: box; width: 0.6; height: 0.18; depth: 0.02;"
                   material="color: #263238"
-                  lab-mineral-button="mineralId: hematite">
+                  lab-mineral-button="mineralId: hematite"
+                  ui-sound>
           <a-entity position="0 0 0.01"
                     text="value: Hematite;
                           align: center;
@@ -678,7 +714,8 @@
                   position="-1.4 0.35 0.02"
                   geometry="primitive: box; width: 0.6; height: 0.18; depth: 0.02;"
                   material="color: #263238"
-                  lab-mineral-button="mineralId: gypsum">
+                  lab-mineral-button="mineralId: gypsum"
+                  ui-sound>
           <a-entity position="0 0 0.01"
                     text="value: Gypsum;
                           align: center;
@@ -722,7 +759,8 @@
                             dir: alternate;
                             loop: 1;
                             startEvents: click;
-                            dur: 120">
+                            dur: 120"
+                  ui-sound>
         </a-entity>
         </a-entity>
 
