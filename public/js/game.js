@@ -93,7 +93,7 @@ AFRAME.registerComponent('fp-controls', {
             addMeshesFrom(env.object3D);
         }
 
-        // 2) Olympus Mons – wait for model to load
+        // 2) Olympus Mons 
         const olympus = document.querySelector('#olympusMons');
         if (olympus) {
             // If the mesh is already there (sometimes it is):
@@ -151,7 +151,7 @@ AFRAME.registerComponent('fp-controls', {
         const hitY = hits[0].point.y;
 
         // Offset so the rig origin (feet) sits slightly above the surface
-        const footOffset = 0.0;   // try 0.05 if you see clipping
+        const footOffset = 0.0;   // 0.0 turns out o be fine, but keep it in case bugs arise
         pos.y = hitY + footOffset;
     },
 
@@ -162,13 +162,13 @@ AFRAME.registerComponent('fp-controls', {
         const speed = this.data.speed;
         const pos   = this.el.object3D.position;
 
-        // 1) apply smooth turn from right stick
+        // Apply smooth turn from right stick
         if (this.turnX !== 0) {
-        // turn right stick right → rotate rig right (negative Y is right in your snap version)
+        // turn right stick right → rotate rig right 
         this.el.object3D.rotation.y += -this.turnX * this.turnSpeed * dt;
         }
 
-        // 2) now compute movement direction based on rig + head
+        // Compute movement direction based on rig + head
         const rigRotY  = this.el.object3D.rotation.y;
         const headRotY = this.head ? this.head.object3D.rotation.y : 0;
         const yaw = rigRotY + headRotY;
@@ -184,11 +184,11 @@ AFRAME.registerComponent('fp-controls', {
         if (this.keys['KeyA'] || this.keys['ArrowLeft'])  dir.sub(right);
         if (this.keys['KeyD'] || this.keys['ArrowRight']) dir.add(right);
 
-        // left-stick movement (already stored)
+        // left-stick movement
         let joyX = this.joy.x;
         let joyY = this.joy.y;
 
-        // optional: still poll gamepads to catch desktop pads
+        
         const pads = navigator.getGamepads ? navigator.getGamepads() : [];
         for (const gp of pads) {
         if (!gp || !gp.connected || !gp.axes) continue;
@@ -293,6 +293,7 @@ const MINERAL_ANALYSIS_TEXT = {
 AFRAME.registerSystem('inventory', {
     init: function () {
         this.collected = new Set();
+        this.analyzed  = new Set();
         this._notifTimeout = null;
     },
 
@@ -325,6 +326,28 @@ AFRAME.registerSystem('inventory', {
 
         return true;
 },
+
+    markAnalyzed: function (id) {
+        if (this.analyzed.has(id)) {
+            return false; // already counted
+        }
+
+        this.analyzed.add(id);
+
+        // Notify listeners (like mission-panel) that analysis progress changed
+        if (this.el) {
+            this.el.emit('analysis-changed', {
+                analyzed: Array.from(this.analyzed)
+            });
+        }
+
+        return true;
+    },
+
+    getAnalyzedCount: function () {
+        return this.analyzed.size;
+    },
+
 
 
 
@@ -361,6 +384,154 @@ AFRAME.registerSystem('inventory', {
         }, 1500);
     }
 });
+
+AFRAME.registerComponent('mission-panel', {
+    init: function () {
+        this.inventory = this.el.sceneEl.systems['inventory'];
+
+        // Text entities in the scene
+        this.rocksEl       = document.querySelector('#missionRocksText');
+        this.analyzeEl     = document.querySelector('#missionAnalyzeText');
+        this.roversEl      = document.querySelector('#missionRoversText');
+        this.olympusEl     = document.querySelector('#missionOlympusText');
+
+        // Strike-through planes
+        this.rocksStrike   = document.querySelector('#missionRocksStrike');
+        this.analyzeStrike = document.querySelector('#missionAnalyzeStrike');
+        this.roversStrike  = document.querySelector('#missionRoversStrike');
+        this.olympusStrike1 = document.querySelector('#missionOlympusStrike1');
+        this.olympusStrike2 = document.querySelector('#missionOlympusStrike2'); //doublie lined mission, needs two strike lines
+
+        // How many different minerals & rovers we care about
+        this.totalMinerals = 4;
+        this.totalRovers   = 3;
+
+        // Local mission state (for non-inventory objectives)
+        this.roversFound   = new Set();
+        this.olympusDone   = false;
+
+        // Bind handlers so "this" works inside callbacks
+        this.updateFromInventory = this.updateFromInventory.bind(this);
+        this.onRoverLocated      = this.onRoverLocated.bind(this);
+        this.onOlympusComplete   = this.onOlympusComplete.bind(this);
+
+        if (this.el.sceneEl) {
+            this.el.sceneEl.addEventListener('inventory-changed', this.updateFromInventory);
+            this.el.sceneEl.addEventListener('analysis-changed',  this.updateFromInventory);
+
+            // New events for rover & Olympus missions
+            this.el.sceneEl.addEventListener('rover-located',        this.onRoverLocated);
+            this.el.sceneEl.addEventListener('olympus-quiz-complete', this.onOlympusComplete);
+        }
+
+        // Initial update once everything is ready
+        this.updateFromInventory();
+    },
+
+    remove: function () {
+        if (!this.el.sceneEl) return;
+
+        this.el.sceneEl.removeEventListener('inventory-changed', this.updateFromInventory);
+        this.el.sceneEl.removeEventListener('analysis-changed',  this.updateFromInventory);
+        this.el.sceneEl.removeEventListener('rover-located',     this.onRoverLocated);
+        this.el.sceneEl.removeEventListener('olympus-quiz-complete', this.onOlympusComplete);
+    },
+
+    onRoverLocated: function (evt) {
+        if (!evt || !evt.detail || !evt.detail.id) return;
+        this.roversFound.add(evt.detail.id); // e.g. 'sojourner', 'opportunity', 'perseverance'
+        this.updateFromInventory();
+    },
+
+    onOlympusComplete: function () {
+        this.olympusDone = true;
+        this.updateFromInventory();
+    },
+
+    updateFromInventory: function () {
+        if (!this.inventory) return;
+
+        const collectedCount = this.inventory.collected
+            ? this.inventory.collected.size
+            : 0;
+
+        const analyzedCount = this.inventory.analyzed
+            ? this.inventory.analyzed.size
+            : 0;
+
+        const rockMax    = this.totalMinerals;
+        const analyzeMax = this.totalMinerals;
+
+        const roversCount = this.roversFound.size;
+        const roversMax   = this.totalRovers;
+
+        const colorTodo = '#ffffff';
+        const colorDone = '#4caf50';
+
+        // --- Mission 1: Collect all rocks ---
+        if (this.rocksEl) {
+            const done = collectedCount >= rockMax;
+            const label = 'Collect all 4 mineral samples';
+            const valueStr = `${label} (${Math.min(collectedCount, rockMax)}/${rockMax})`;
+
+            this.rocksEl.setAttribute('text', 'value', valueStr);
+            this.rocksEl.setAttribute('text', 'color', done ? colorDone : colorTodo);
+
+            if (this.rocksStrike) {
+                this.rocksStrike.setAttribute('visible', done);
+            }
+        }
+
+        // --- Mission 2: Analyze minerals ---
+        if (this.analyzeEl) {
+            const done = analyzedCount >= analyzeMax;
+            const label = 'Analyze all 4 mineral samples';
+            const valueStr = `${label} (${Math.min(analyzedCount, analyzeMax)}/${analyzeMax})`;
+
+            this.analyzeEl.setAttribute('text', 'value', valueStr);
+            this.analyzeEl.setAttribute('text', 'color', done ? colorDone : colorTodo);
+
+            if (this.analyzeStrike) {
+                this.analyzeStrike.setAttribute('visible', done);
+            }
+        }
+
+        // --- Mission 3: Locate all 3 rovers ---
+        if (this.roversEl) {
+            const done = roversCount >= roversMax;
+            const label = 'Locate all 3 Mars rovers';
+            const valueStr = `${label} (${Math.min(roversCount, roversMax)}/${roversMax})`;
+
+            this.roversEl.setAttribute('text', 'value', valueStr);
+            this.roversEl.setAttribute('text', 'color', done ? colorDone : colorTodo);
+
+            if (this.roversStrike) {
+                this.roversStrike.setAttribute('visible', done);
+            }
+        }
+
+        // --- Mission 4: Climb Olympus Mons + quiz ---
+        if (this.olympusEl) {
+            const done = this.olympusDone;
+            const label = 'Climb Olympus Mons and complete the summit quiz';
+            const valueStr = done
+                ? `${label} (1/1)`
+                : `${label} (0/1)`;
+
+            this.olympusEl.setAttribute('text', 'value', valueStr);
+            this.olympusEl.setAttribute('text', 'color', done ? colorDone : colorTodo);
+
+            if (this.olympusStrike1) {
+                this.olympusStrike1.setAttribute('visible', done);
+            }
+            if (this.olympusStrike2) {
+                this.olympusStrike2.setAttribute('visible', done);
+            }
+        }
+    }
+});
+
+
 
 
 AFRAME.registerComponent('interactive-door', {
@@ -402,10 +573,9 @@ AFRAME.registerComponent('interactive-door', {
         this.openCollider.setAttribute('visible', 'false');
         // not 'solid' initially
         this.el.sceneEl.appendChild(this.openCollider);
-        //Only the button works, not the click
-        //this.el.addEventListener('click', () => this.toggleDoor());
-
         this.el.addEventListener('toggle-door', () => this.toggleDoor());
+        // Emit initial closed state so buttons start with the right label
+        this.el.emit('door-state-changed', { open: this.isOpen });
     },
 
     toggleDoor() {
@@ -427,6 +597,9 @@ AFRAME.registerComponent('interactive-door', {
         this.closedCollider.setAttribute('class', 'solid');
         }
 
+        // 🔔 Notify listeners (like buttons) about the new state
+        this.el.emit('door-state-changed', { open: this.isOpen });
+
         // tell fp-controls to rebuild AABBs
         this.el.sceneEl.emit('solids-changed');
     }
@@ -434,24 +607,98 @@ AFRAME.registerComponent('interactive-door', {
 
 AFRAME.registerComponent('door-button', {
     schema: {
-        target: { type: 'selector' }  // the hinge entity, e.g. #outerDoorHinge
+        target:       { type: 'selector' },   // the hinge entity, e.g. #outerDoorHinge
+        pressDistance:{ type: 'number', default: 0.04 }, // how far to press
+        pressColor:   { type: 'color',  default: '#777777' },
+        baseColor:    { type: 'color',  default: '' }     // optional override
     },
 
     init: function () {
+        // Label (child with text)
+        this.labelEl = this.el.querySelector('[text]');
+
+        // Remember original local position (relative to its parent)
+        const pos = this.el.object3D.position;
+        this.basePos = new THREE.Vector3(pos.x, pos.y, pos.z);
+
+        // Remember original color
+        const mat = this.el.getAttribute('material') || {};
+        this.baseColor = this.data.baseColor || mat.color || '#00b894';
+
         this.onClick = this.onClick.bind(this);
+        this.onDoorStateChanged = this.onDoorStateChanged.bind(this);
+
         this.el.addEventListener('click', this.onClick);
+
+        // Listen to door state events from hinge
+        if (this.data.target) {
+            this.data.target.addEventListener(
+                'door-state-changed',
+                this.onDoorStateChanged
+            );
+        }
     },
 
     remove: function () {
         this.el.removeEventListener('click', this.onClick);
+        if (this.data.target) {
+            this.data.target.removeEventListener(
+                'door-state-changed',
+                this.onDoorStateChanged
+            );
+        }
     },
 
     onClick: function () {
         if (!this.data.target) return;
-        console.log('[door-button] toggling', this.data.target.id); //debugging
+
+        // Toggle the door
         this.data.target.emit('toggle-door');
+
+        // Play visual press effect
+        this.playPressEffect();
+    },
+
+    playPressEffect: function () {
+        const obj = this.el.object3D;
+
+        // Start with local -Z (button "forward"), then rotate by this entity's rotation
+        const dir = new THREE.Vector3(0, 0, -1);
+        dir.applyQuaternion(obj.quaternion);
+
+        // Project onto ground plane so movement is parallel to ground
+        dir.y = 0;
+        if (dir.lengthSq() === 0) {
+            // fallback if somehow dir is vertical
+            dir.set(0, 0, -1);
+        }
+        dir.normalize();
+
+        // Move pressDistance along that horizontal direction
+        const offset = dir.clone().multiplyScalar(this.data.pressDistance);
+        const pressedPos = this.basePos.clone().add(offset);
+
+        // Apply pressed state
+        obj.position.copy(pressedPos);
+        this.el.setAttribute('material', 'color', this.data.pressColor);
+
+        // Restore after a short delay
+        setTimeout(() => {
+            obj.position.copy(this.basePos);
+            this.el.setAttribute('material', 'color', this.baseColor);
+        }, 120);
+    },
+
+    onDoorStateChanged: function (evt) {
+        const isOpen = !!(evt && evt.detail && evt.detail.open);
+        if (!this.labelEl) return;
+
+        const newLabel = isOpen ? 'CLOSE' : 'OPEN';
+        this.labelEl.setAttribute('text', 'value', newLabel);
     }
 });
+
+
 
 
 AFRAME.registerComponent('ignore-raycast', {
@@ -569,10 +816,13 @@ AFRAME.registerComponent('inventory-button', {
         this.inventory = this.el.sceneEl.systems['inventory'];
         this.isOpen = false;
 
-        // NEW: cache question + back button
-        this.questionEl = document.querySelector('#mineralQuestion');
+        // Cache question + back button
+        this.questionEl   = document.querySelector('#mineralQuestion');
         this.backButtonEl = document.querySelector('#backButton');
-        this.analysisEl = document.querySelector('#analysisText');
+        this.analysisEl   = document.querySelector('#analysisText');
+
+        // Reference to the hint text
+        this.hintEl = document.querySelector('#labHintText');
 
         this.onClick = this.onClick.bind(this);
         this.el.addEventListener('click', this.onClick);
@@ -585,11 +835,18 @@ AFRAME.registerComponent('inventory-button', {
     onClick: function () {
         if (!this.panel) return;
 
+        // Toggle open/close state
         this.isOpen = !this.isOpen;
         this.panel.setAttribute('visible', this.isOpen);
 
+        // Show hint only when the console is CLOSED
+        if (this.hintEl) {
+            this.hintEl.setAttribute('visible', !this.isOpen);
+        }
+
+        // When opening: refresh UI
         if (this.isOpen) {
-            // Refresh collected list if you have one
+            // Refresh collected list 
             if (this.inventory && this.inventory.updatePanel) {
                 this.inventory.updatePanel();
             }
@@ -611,6 +868,7 @@ AFRAME.registerComponent('inventory-button', {
         }
     }
 });
+
 
 
 AFRAME.registerComponent('lab-mineral-button', {
@@ -681,7 +939,7 @@ AFRAME.registerComponent('lab-mineral-button', {
 
         if (this._timeout) clearTimeout(this._timeout);
 
-        // Fake 10s analysis, then show result from lookup (or fallback)
+        // Fake 5s analysis, then show result from lookup (or fallback)
         this._timeout = setTimeout(() => {
             if (!this.analysisEl) return;
 
@@ -694,7 +952,12 @@ AFRAME.registerComponent('lab-mineral-button', {
                 'value',
                 resultText
             );
-        }, 5000); // 10 seconds
+
+            // Mark this mineral as analyzed in the inventory system
+            if (this.inventory && this.inventory.markAnalyzed) {
+                this.inventory.markAnalyzed(id);
+            }
+        }, 5000); // 5 seconds
     }
 });
 
@@ -842,6 +1105,8 @@ AFRAME.registerComponent('rover-quiz', {
     init: function () {
         const el = this.el;
 
+        this.hasReportedLocated = false; //for the mission list
+
         // Find rover model (the clickable mesh)
         this.roverModel = el.querySelector('[gltf-model]');
         if (this.roverModel) {
@@ -951,6 +1216,12 @@ AFRAME.registerComponent('rover-quiz', {
     },
 
     onRoverClick: function () {
+        // First time the player opens this panel, count this rover as "located"
+        if (!this.hasReportedLocated && this.el.sceneEl) {
+            this.hasReportedLocated = true;
+            this.el.sceneEl.emit('rover-located', { id: 'sojourner' });
+        }
+
         const visible = this.panel.getAttribute('visible');
         this.panel.setAttribute('visible', !visible);
     },
@@ -997,6 +1268,8 @@ AFRAME.registerComponent('rover-quiz', {
 AFRAME.registerComponent('olympus-quiz', {
     init: function () {
         const el = this.el;
+
+        this.hasReportedComplete = false; // for mission log
 
         // Keep track of answer buttons so we can remove/hide them later
         this.options = [];
@@ -1060,7 +1333,7 @@ AFRAME.registerComponent('olympus-quiz', {
         // Options 
         this.createOption('About the same height', 'same', -0.9, -0.6);
         this.createOption('About 3× higher',       '3x',    0.0, -0.6); // correct
-        this.createOption('About half as high',    'half',  0.9, -0.6);
+        this.createOption('About 10x higher',    '10x',  0.9, -0.6);
 
         // Attach the panel to the anchor
         el.appendChild(panel);
@@ -1165,6 +1438,13 @@ AFRAME.registerComponent('olympus-quiz', {
         }
 
         this.revealPhoto();
+
+        // Tell the scene that the Olympus mission is complete 
+        if (!this.hasReportedComplete && this.el.sceneEl) {
+            this.hasReportedComplete = true;
+            this.el.sceneEl.emit('olympus-quiz-complete', {});
+        }
+
     },
 
     revealPhoto: function () {
@@ -1181,3 +1461,579 @@ AFRAME.registerComponent('olympus-quiz', {
         });
     }
 });
+
+
+AFRAME.registerComponent('opportunity-quiz', {
+    schema: {
+        title: {
+            type: 'string',
+            default: 'Opportunity – Mars Exploration Rover (2004 to 2018)'
+        },
+        intro: {
+            type: 'string',
+            default:
+                'Opportunity was one of NASA\'s Mars Exploration Rovers.\n' +
+                'It landed in 2004 and far outlived its 90-day design life,\n' +
+                'exploring Mars for almost 15 years. It found strong evidence\n' +
+                'for past water, including hematite “blueberries” and sulfate-rich rocks.'
+        }
+    },
+
+    init: function () {
+        const el = this.el;
+
+        this.hasReportedLocated = false; // for mission log
+
+        // Find rover model (the clickable mesh)
+        this.roverModel = el.querySelector('[gltf-model]');
+        if (this.roverModel) {
+            this.roverModel.classList.add('interactive');
+        }
+
+        // Grab the floating hint on top of the rover
+        this.hintEl = el.querySelector('.rover-hint');
+        this.hintHidden = false;
+
+        this.options = [];
+        this.panel = null;
+        this.playButton = null;
+
+        // Build quiz panel
+        this.buildPanel();
+
+        // Clicking the rover toggles panel visibility
+        this.onRoverClick = this.onRoverClick.bind(this);
+        if (this.roverModel) {
+            this.roverModel.addEventListener('click', this.onRoverClick);
+        }
+    },
+
+    buildPanel: function () {
+        const panel = document.createElement('a-entity');
+        panel.setAttribute('visible', false);
+        panel.setAttribute('position', '-2.67 1.78 1.3');
+        panel.setAttribute('rotation', '-15 0 0');
+        this.panel = panel;
+
+        // Background
+        const bg = document.createElement('a-plane');
+        bg.setAttribute('position', '-0.017 0.158 -0.059');
+        bg.setAttribute('width', 2.4);
+        bg.setAttribute('height', 1.9);
+        bg.setAttribute('material', 'color: #111; opacity: 0.9; side: double;');
+        panel.appendChild(bg);
+
+        // Title
+        const titleEl = document.createElement('a-entity');
+        titleEl.setAttribute('position', '0 1.2 0.09');
+        titleEl.setAttribute('text', {
+            value: this.data.title,
+            align: 'center',
+            width: 2.3,
+            color: '#1b1717ff',
+            wrapCount: 32
+        });
+        panel.appendChild(titleEl);
+
+        // Intro
+        const introEl = document.createElement('a-entity');
+        introEl.setAttribute('position', '0 0.3 0.01');
+        introEl.setAttribute('text', {
+            value: this.data.intro,
+            align: 'left',
+            width: 2.2,
+            color: '#ffffff',
+            wrapCount: 40
+        });
+        panel.appendChild(introEl);
+        this.introEl = introEl;
+
+        // Question
+        const questionEl = document.createElement('a-entity');
+        questionEl.setAttribute('position', '0 -0.33 -0.026');
+        questionEl.setAttribute('text', {
+            value:
+                'How did Opportunity reach the Martian surface during landing?',
+            align: 'center',
+            width: 2.2,
+            color: '#ffffff',
+            wrapCount: 36
+        });
+        panel.appendChild(questionEl);
+        this.questionEl = questionEl;
+
+        // Answer options (one row of three)
+        this.createOption('Airbags + parachute', 'airbags', -1.14, -0.7); // correct
+        this.createOption('Sky crane + cables', 'skycrane', -0.06, -0.7);
+        this.createOption('Powered landing on legs', 'legs', 0.953, -0.7);
+
+        // Play animation button (initially hidden)
+        const playButton = document.createElement('a-entity');
+        playButton.setAttribute('visible', false);
+        playButton.setAttribute('class', 'interactive');
+        playButton.setAttribute(
+            'geometry',
+            'primitive: box; width: 1.3; height: 0.3; depth: 0.03'
+        );
+        playButton.setAttribute(
+            'material',
+            'color: #2e7d32; metalness: 0.2; roughness: 0.6;'
+        );
+        playButton.setAttribute('position', '0 -1.15 0.02');
+
+        const playLabel = document.createElement('a-entity');
+        playLabel.setAttribute('position', '0 0 0.02');
+        playLabel.setAttribute('text', {
+            value: 'Play deployment animation',
+            align: 'center',
+            width: 2,
+            color: '#ffffff'
+        });
+        playButton.appendChild(playLabel);
+
+        playButton.addEventListener('click', () => {
+            this.playDeploymentAnimation();
+        });
+
+        panel.appendChild(playButton);
+        this.playButton = playButton;
+
+        // Attach panel to rover root
+        this.el.appendChild(panel);
+    },
+
+    createOption: function (label, value, x, y) {
+        const option = document.createElement('a-entity');
+        option.setAttribute('class', 'interactive opportunity-quiz-option');
+        option.setAttribute(
+            'geometry',
+            'primitive: box; width: 0.95; height: 0.25; depth: 0.03'
+        );
+        option.setAttribute(
+            'material',
+            'color: #263238; metalness: 0.2; roughness: 0.8;'
+        );
+        option.setAttribute('position', `${x} ${y} 0.02`);
+        option.setAttribute('data-value', value);
+
+        const labelEl = document.createElement('a-entity');
+        labelEl.setAttribute('position', '0 0 0.02');
+        labelEl.setAttribute('text', {
+            value: label,
+            align: 'center',
+            width: 1.8,
+            color: '#ffffff'
+        });
+        option.appendChild(labelEl);
+
+        option.addEventListener('click', (evt) => {
+            evt.stopPropagation();
+            const chosen = option.getAttribute('data-value');
+            this.handleAnswer(chosen);
+        });
+
+        this.panel.appendChild(option);
+        this.options.push(option);
+    },
+
+    onRoverClick: function () {
+        if (!this.panel) return;
+
+        // Count this rover as located the first time
+        if (!this.hasReportedLocated && this.el.sceneEl) {
+            this.hasReportedLocated = true;
+            this.el.sceneEl.emit('rover-located', { id: 'opportunity' });
+        }
+
+        // First click: hide the floating hint forever
+        if (!this.hintHidden && this.hintEl) {
+            this.hintEl.setAttribute('visible', false);
+            this.hintHidden = true;
+        }
+        const visible = this.panel.getAttribute('visible');
+        this.panel.setAttribute('visible', !visible);
+    },
+
+    handleAnswer: function (value) {
+        const correct = 'airbags';
+        const isCorrect = (value === correct);
+
+        const explanation =
+            'Opportunity landed using a heat shield, parachute, and large airbags.\n' +
+            'The lander hit the atmosphere at high speed, slowed by the parachute,\n' +
+            'then bounced and rolled across the Martian surface until it came to rest.\n' +
+            'Later rovers like Curiosity and Perseverance used a \"sky crane\" system instead.';
+
+        const prefix = isCorrect ? 'Correct! 🎉\n\n' : 'Nice try.\n\n';
+        const text = prefix + explanation + '\n\nYou can now play a deployment animation.';
+
+        if (this.introEl) {
+            this.introEl.setAttribute('visible', false);
+        }
+
+        if (this.questionEl) {
+            this.questionEl.setAttribute('position', '0 0.25 0.01');
+            this.questionEl.setAttribute('text', 'value', text);
+        }
+
+        // Remove answer buttons
+        if (this.options && this.options.length) {
+            this.options.forEach(opt => {
+                if (opt.parentNode) opt.parentNode.removeChild(opt);
+            });
+            this.options = [];
+        }
+
+        // Show "Play deployment animation" button
+        if (this.playButton) {
+            this.playButton.setAttribute('visible', true);
+        }
+    },
+
+    playDeploymentAnimation: function () {
+        if (!this.roverModel) return;
+
+        // Start glTF animation once, from the beginning.
+        // Requires aframe-extras (which you already include).
+        this.roverModel.setAttribute('animation-mixer', {
+            clip: '*',
+            loop: 'once',
+            timeScale: 1,
+            clampWhenFinished: true
+        });
+    },
+
+    remove: function () {
+        if (this.roverModel && this.onRoverClick) {
+            this.roverModel.removeEventListener('click', this.onRoverClick);
+        }
+    }
+});
+
+AFRAME.registerComponent('opportunity-skin', {
+  init: function () {
+    const el = this.el;
+
+    // Get the <img> asset that just gives us the path
+    const imgEl = document.querySelector('#opportunityTexture');
+    if (!imgEl) {
+      console.warn('[opportunity-skin] #opportunityTexture not found in DOM');
+      return;
+    }
+
+    const src = imgEl.getAttribute('src');
+    console.log('[opportunity-skin] using texture src:', src);
+
+    const loader = new THREE.TextureLoader();
+    this.texture = null;
+
+    // Load texture
+    loader.load(
+      src,
+      (texture) => {
+        console.log('[opportunity-skin] texture loaded');
+        this.texture = texture;
+        this.applyTexture();   // in case model is already loaded
+      },
+      undefined,
+      (err) => console.error('[opportunity-skin] texture load error', err)
+    );
+
+    // When the glTF model is ready, apply texture
+    el.addEventListener('model-loaded', () => {
+      console.log('[opportunity-skin] model-loaded fired');
+      this.applyTexture();
+    });
+  },
+
+  applyTexture: function () {
+    if (!this.texture) {
+      console.log('[opportunity-skin] applyTexture called but texture not ready yet');
+      return;
+    }
+
+    const mesh = this.el.getObject3D('mesh');
+    if (!mesh) {
+      console.log('[opportunity-skin] no mesh found on entity yet');
+      return;
+    }
+
+    console.log('[opportunity-skin] applying texture to mesh');
+
+    mesh.traverse(node => {
+      if (!node.isMesh || !node.material) return;
+
+      // Handle both single and multi-material
+      const materials = Array.isArray(node.material)
+        ? node.material
+        : [node.material];
+
+      materials.forEach(m => {
+        m.map = this.texture;
+        m.color.set('#ffffff');   // neutral base color
+        m.metalness = 0.2;
+        m.roughness = 0.9;
+        m.needsUpdate = true;
+      });
+    });
+  }
+});
+
+AFRAME.registerComponent('perseverance-quiz', {
+    schema: {
+        title: {
+            type: 'string',
+            default: 'Perseverance – Mars 2020 Rover (since 2021)'
+        },
+        intro: {
+            type: 'string',
+            default:
+                'Perseverance landed in Jezero Crater (see the spinning model) in 2021.\n' +
+                'Long ago, this whole place was filled with water like a lake.\n' +
+                'Perseverance is exploring the old lake bottom, studying rocks,\n' +
+                'and collecting samples that might one day be brought back to Earth.'
+        }
+    },
+
+    init: function () {
+        const el = this.el;
+
+        this.hasReportedLocated = false;// for mission log
+
+        // Find rover model (clickable mesh)
+        this.roverModel = el.querySelector('[gltf-model]');
+        if (this.roverModel) {
+            this.roverModel.classList.add('interactive');
+        }
+
+        // Hint above rover
+        this.hintEl = el.querySelector('.rover-hint');
+        this.hintHidden = false;
+
+        this.options = [];
+        this.panel = null;
+
+        this.buildPanel();
+
+        // Clicking rover toggles panel
+        this.onRoverClick = this.onRoverClick.bind(this);
+        if (this.roverModel) {
+            this.roverModel.addEventListener('click', this.onRoverClick);
+        }
+    },
+
+    buildPanel: function () {
+        const panel = document.createElement('a-entity');
+        panel.setAttribute('visible', false);
+        panel.setAttribute('position', '-2.2 1.7 1.2');
+        panel.setAttribute('rotation', '-15 0 0');
+        this.panel = panel;
+
+        // Background
+        const bg = document.createElement('a-plane');
+        bg.setAttribute('width', 2.6);
+        bg.setAttribute('height', 1.8);
+        bg.setAttribute('material', 'color: #111; opacity: 0.9; side: double;');
+        panel.appendChild(bg);
+
+        // Title
+        const titleEl = document.createElement('a-entity');
+        titleEl.setAttribute('position', '0 1.1 0.01');
+        titleEl.setAttribute('text', {
+            value: this.data.title,
+            align: 'center',
+            width: 2.4,
+            color: '#8a2309ff',
+            wrapCount: 32
+        });
+        panel.appendChild(titleEl);
+
+        // Intro
+        const introEl = document.createElement('a-entity');
+        introEl.setAttribute('position', '0.075 0.33 0.17');
+        introEl.setAttribute('text', {
+            value: this.data.intro,
+            align: 'left',
+            width: 2.3,
+            color: '#ffffff',
+            wrapCount: 40
+        });
+        panel.appendChild(introEl);
+        this.introEl = introEl;
+
+        // Question about Jezero + crater walls
+        const questionEl = document.createElement('a-entity');
+        questionEl.setAttribute('position', '-0.075 -0.32 0.04');
+        questionEl.setAttribute('text', {
+            value:
+                'You are standing on the floor of Jezero Crater.\n' +
+                'Long ago, this was the bottom of a lake on Mars.\n' +
+                'Look at the crater diameter in the spinning figure .\n' +
+                'About how big do you think that ancient lake was in diameter?',
+            align: 'center',
+            width: 2.3,
+            color: '#ffffff',
+            wrapCount: 40
+        });
+        panel.appendChild(questionEl);
+        this.questionEl = questionEl;
+
+        // Kid-friendly answers (one correct: 600 m)
+        this.createOption('About 25km ', '25km',   -1.0, -0.7);
+        this.createOption('About 45km ', '45km', 0.0, -0.7); // correct
+        this.createOption('About 85km ', '85km', 1.0, -0.7);
+
+        // --- Mini Jezero Crater model: auto-rotating only ---
+        const miniCrater = document.createElement('a-entity');
+        miniCrater.setAttribute('gltf-model', '#jezeroCraterGLB');
+        miniCrater.setAttribute('position', '1.26 -1.2 1');
+        miniCrater.setAttribute('rotation', '0 0 0');   
+        miniCrater.setAttribute('scale', '0.01 0.01 0.01');
+
+        // spin
+        miniCrater.setAttribute('animation__idle', {
+            property: 'rotation',
+            from: '0 0 0',
+            to:   '0 360 0',
+            loop: true,
+            dur: 20000,
+            easing: 'linear'
+        });
+
+        panel.appendChild(miniCrater);
+        this.miniCrater = miniCrater;
+
+        this.el.appendChild(panel);
+    },
+
+    createOption: function (label, value, x, y) {
+        const option = document.createElement('a-entity');
+        option.setAttribute('class', 'interactive perseverance-quiz-option');
+        option.setAttribute(
+            'geometry',
+            'primitive: box; width: 0.95; height: 0.25; depth: 0.03'
+        );
+        option.setAttribute(
+            'material',
+            'color: #263238; metalness: 0.2; roughness: 0.8;'
+        );
+        option.setAttribute('position', `${x} ${y} 0.02`);
+        option.setAttribute('data-value', value);
+
+        const labelEl = document.createElement('a-entity');
+        labelEl.setAttribute('position', '0 0 0.02');
+        labelEl.setAttribute('text', {
+            value: label,
+            align: 'center',
+            width: 1.8,
+            color: '#ffffff'
+        });
+        option.appendChild(labelEl);
+
+        option.addEventListener('click', (evt) => {
+            evt.stopPropagation();
+            const chosen = option.getAttribute('data-value');
+            this.handleAnswer(chosen);
+        });
+
+        this.panel.appendChild(option);
+        this.options.push(option);
+    },
+
+    onRoverClick: function () {
+        if (!this.panel) return;
+
+        // First time: mark Perseverance as located
+        if (!this.hasReportedLocated && this.el.sceneEl) {
+            this.hasReportedLocated = true;
+            this.el.sceneEl.emit('rover-located', { id: 'perseverance' });
+        }
+
+        // hide hint after first open
+        if (!this.hintHidden && this.hintEl) {
+            this.hintEl.setAttribute('visible', false);
+            this.hintHidden = true;
+        }
+
+        const visible = this.panel.getAttribute('visible');
+        this.panel.setAttribute('visible', !visible);
+    },
+
+    handleAnswer: function (value) {
+        const correct = '45km';
+        const isCorrect = (value === correct);
+
+        const explanation =
+                'The ancient lake inside Jezero Crater was about 45 kilometers wide.\n' +
+                'Long ago, rivers flowed into Jezero and filled it with water,\n' +
+                'building big muddy deltas on the crater floor.\n' +
+                'Today Perseverance is driving on that old lake bottom,\n' +
+                'studying the rocks and collecting samples to look for signs\n' +
+                'of ancient microscopic life.';
+
+        const prefix = isCorrect ? 'Correct! \n\n' : 'Nice try.\n\n';
+        const text = prefix + explanation;
+
+        if (this.introEl) {
+            this.introEl.setAttribute('visible', false);
+        }
+
+        if (this.questionEl) {
+            this.questionEl.setAttribute('position', '0.023 0.193 0.01');
+            this.questionEl.setAttribute('text', 'value', text);
+        }
+
+        // Remove options after answer
+        if (this.options && this.options.length) {
+            this.options.forEach(opt => {
+                if (opt.parentNode) opt.parentNode.removeChild(opt);
+            });
+            this.options = [];
+        }
+
+        // Optional: still ping a Jezero crater entity for a fun effect
+        const crater = document.querySelector('#jezeroCrater');
+        if (crater) {
+            crater.emit('highlight-crater'); // you can listen for this in another component if you want
+        }
+    },
+
+    remove: function () {
+        if (this.roverModel && this.onRoverClick) {
+            this.roverModel.removeEventListener('click', this.onRoverClick);
+        }
+    }
+});
+
+
+
+AFRAME.registerComponent('lab-hint', {
+    init: function () {
+        // Reference to the hint text entity itself
+        this.hintEl = this.el;
+
+        // Reference to the inventory button so we can simulate a click on it
+        this.inventoryButton = document.querySelector('#inventoryButton');
+
+        this.onClick = this.onClick.bind(this);
+        this.hintEl.addEventListener('click', this.onClick);
+    },
+
+    remove: function () {
+        if (this.hintEl) {
+            this.hintEl.removeEventListener('click', this.onClick);
+        }
+    },
+
+    onClick: function () {
+        // Hide the hint immediately
+        this.hintEl.setAttribute('visible', false);
+
+        // Also open the lab console by "clicking" the inventory button
+        if (this.inventoryButton) {
+            this.inventoryButton.emit('click');
+        }
+    }
+});
+
+

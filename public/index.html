@@ -31,6 +31,10 @@
         <a-asset-item id="olympusGLB" src="assets/mars_-_olympus_mons.glb"></a-asset-item>
         <a-asset-item id="sojournerRover" response-type="arraybuffer" src="assets/sojournerRover.glb"></a-asset-item>
         <a-asset-item id="opportunityRover" response-type="arraybuffer" src="assets/opportunity.glb"></a-asset-item>
+        <a-asset-item id="perseveranceRover" response-type="arraybuffer" src="assets/perseverance.glb"></a-asset-item>
+        <a-asset-item id="jezeroCraterGLB" response-type="arraybuffer" src="assets/jezeroCrater.glb"></a-asset-item>
+
+
 
 
 
@@ -289,9 +293,11 @@
                   position="0 0.48 0"
                   geometry="primitive: cylinder; radius: 0.1; height: 0.05"
                   material="color: #00b894; metalness: 0.3; roughness: 0.5"
-                  door-button="target: #outerDoorHinge"
+                  door-button="target: #outerDoorHinge; verticalPress: true"
                   ui-sound>
-          <a-entity position="0 0.2 0"
+
+          <!-- Text label for OPEN/CLOSE -->
+          <a-entity position="0 0.18 0"
                     rotation="0 180 0"
                     text="value: OPEN;
                           align: center;
@@ -299,8 +305,8 @@
                           color: #ffffff;">
           </a-entity>
         </a-entity>
-
       </a-entity>
+    </a-entity>
 
 
 
@@ -436,6 +442,113 @@
         </a-entity>
       </a-entity>
 
+        <!-- MISSION LOG PANEL -->
+        <a-entity id="missionPanel"
+                  position="-2 1.3 4.6"
+                  rotation="0 180 0"
+                  mission-panel>
+
+          <!-- Background -->
+          <a-plane width="1.8" height="1.8"
+                  position="0 0 -0.16"
+                  material="color: #111; opacity: 0.9; side: double">
+          </a-plane>
+
+          <!-- Title -->
+          <a-entity position="0 0.75 0.01"
+                    text="value: Mission Log;
+                          align: center;
+                          width: 1.6;
+                          color: #ffd480;">
+          </a-entity>
+
+          <!-- Mission: collect rocks -->
+          <a-entity id="missionRocksText"
+                    position="0.025 0.52 0.01"
+                    text="value: Collect all 4 mineral samples (0/4);
+                          align: left;
+                          width: 1.6;
+                          wrapCount: 30;
+                          color: #ffffff;">
+          </a-entity>
+
+          <!-- Strike-through for collect mission (initially hidden) -->
+          <a-plane id="missionRocksStrike"
+                  position="0 0.52 0.02"
+                  width="1.6"
+                  height="0.01"
+                  visible="false"
+                  material="color: #4caf50; opacity: 0.8; side: double;">
+          </a-plane>
+
+          <!-- Mission: analyze minerals -->
+          <a-entity id="missionAnalyzeText"
+                    position="0.025 0.25 0.01"
+                    text="value: Analyze all 4 mineral samples (0/4);
+                          align: left;
+                          width: 1.6;
+                          wrapCount: 30;
+                          color: #ffffff;">
+          </a-entity>
+
+          <!-- Strike-through for analyze mission (initially hidden) -->
+          <a-plane id="missionAnalyzeStrike"
+                  position="0 0.25 0.02"
+                  width="1.6"
+                  height="0.01"
+                  visible="false"
+                  material="color: #4caf50; opacity: 0.8; side: double;">
+          </a-plane>
+
+          <!-- Mission: locate all 3 rovers -->
+          <a-entity id="missionRoversText"
+                    position="0.025 0.0 0.01"
+                    text="value: Locate all 3 Mars rovers (0/3);
+                          align: left;
+                          width: 1.6;
+                          wrapCount: 30;
+                          color: #ffffff;">
+          </a-entity>
+
+          <a-plane id="missionRoversStrike"
+                  position="0 0.0 0.02"
+                  width="1.6"
+                  height="0.01"
+                  visible="false"
+                  material="color: #4caf50; opacity: 0.8; side: double;">
+          </a-plane>
+
+          <!-- Mission: climb Olympus Mons -->
+          <a-entity id="missionOlympusText"
+                    position="0.025 -0.27 0.01"
+                    text="value: Climb Olympus Mons and complete the summit quiz (0/1);
+                          align: left;
+                          width: 1.6;
+                          wrapCount: 30;
+                          color: #ffffff;">
+          </a-entity>
+
+          <a-plane id="missionOlympusStrike1"
+                  position="0 -0.223 0.02"
+                  width="1.6"
+                  height="0.01"
+                  visible="false"
+                  material="color: #4caf50; opacity: 0.8; side: double;">
+          </a-plane>
+
+          <a-plane id="missionOlympusStrike2"
+                  position="0 -0.32 0.02"
+                  width="1.6"
+                  height="0.01"
+                  visible="false"
+                  material="color: #4caf50; opacity: 0.8; side: double;">
+          </a-plane>
+
+
+
+        </a-entity>
+
+
       <!-- Sojourner rover with quiz -->
       <a-entity id="sojournerRoverRoot"
                 position="26 1.2 38"
@@ -496,11 +609,46 @@
         </a-entity>
       </a-entity>
 
+      <!-- Perseverance rover with quiz (near Jezero Crater) -->
+      <a-entity id="perseveranceRoverRoot"
+                position="-73.4 0.34 39.3"
+                rotation="0 140 0"
+                perseverance-quiz>
+
+        <!-- Rover model -->
+        <a-entity id="perseveranceModel"
+                  gltf-model="#perseveranceRover"
+                  position="0 0 0"
+                  rotation="0 0 0"
+                  scale="0.8 0.8 0.8"
+                  class="interactive">
+        </a-entity>
+
+        <!-- Floating hint above rover -->
+        <a-entity class="rover-hint"
+                  position="0 1.6 0"
+                  text="value: Click rover to learn about Perseverance;
+                        align: center;
+                        width: 3;
+                        color: #ffd480;"
+                  animation="property: position;
+                            dir: alternate;
+                            dur: 1000;
+                            easing: easeInOutSine;
+                            to: 0 1.8 0;
+                            loop: true;">
+        </a-entity>
+      </a-entity>
+
+
+
+
 
 
       <!-- Collectible basalt rock outside the base -->
       <a-entity id="basaltRockRoot"
-                position="-20 0.1 -45"
+                position="-75.12 7.45 -1.735"
+                rotation="0 90 0"
                 rock-grabbable="rockId: basalt">
 
         <!-- Actual rock mesh (small + clickable) -->
@@ -584,7 +732,7 @@
 
       <!-- Collectible gypsum rock -->
       <a-entity id="gypsumRockRoot"
-                position="30 0.44 10"
+                position="1.5 0.44 26"
                 rock-grabbable="rockId: gypsum">
 
         <!-- Actual rock mesh (clickable) -->
@@ -762,7 +910,27 @@
                             dur: 120"
                   ui-sound>
         </a-entity>
+
+        <a-entity id="labHintText"
+                  class="interactive"
+                  position="0.8 0.6 0"
+                  scale="0.5 0.5 0.5"
+                  lab-hint
+                  text="value: Click the button to analyze collected rocks;
+                        align: center;
+                        width: 2.4;
+                        wrapCount: 28;
+                        color: #9e5c0b;"
+                  animation__bounce="property: position;
+                                    from: 0.8 0.6 0;
+                                    to: 0.8 0.8 0;
+                                    dir: alternate;
+                                    loop: true;
+                                    dur: 1000;
+                                    easing: easeInOutSine">
         </a-entity>
+
+      </a-entity>
 
 
       <!-- Inventory display shelf on the right wall -->
@@ -861,9 +1029,6 @@
                           width: 2;
                           color: #ffffff;">
           </a-entity>
-
-
-
 
       <!-- Mars landscape -->
       <a-entity id="marsEnv"
