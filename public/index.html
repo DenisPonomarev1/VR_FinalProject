@@ -734,20 +734,20 @@
                 inventory-shelf>
 
         <!-- Shelf board -->
-        <a-box position="0 0 0"
-              width="1.6" height="0.05" depth="0.4"
+        <a-box position="-0.18 0 0"
+              width="1.9" height="0.05" depth="0.4"
               material="color: #444; metalness: 0.2; roughness: 0.8;">
         </a-box>
 
         <!-- Label panel above the shelf -->
         <a-entity position="-1 0.35 0.05">
           <!-- Background panel -->
-          <a-plane width="1.4" height="0.3" position ="0 0.4 0"
+          <a-plane width="1.4" height="0.3" position ="0.68 0.4 0"
                   material="color: #111; opacity: 0.9; side: double;">
           </a-plane>
 
           <!-- Text: "Collected rocks" -->
-          <a-entity position="0 0.4 0.01"
+          <a-entity position="0.64 0.4 0.01"
                     text="value: Collected rocks;
                           align: center;
                           width: 2;
@@ -783,18 +783,11 @@
                   gltf-model="#hematiteRock">
         </a-entity>
 
-
-        <!-- SECOND SHELF BOARD (slightly left) -->
-        <a-box position="-1.7 0 0"
-              width="1.6" height="0.05" depth="0.4"
-              material="color: #444; metalness: 0.2; roughness: 0.8;">
-        </a-box>
-
-        <!-- Gypsum display sitting left shelf -->
+        <!-- Gypsum display -->
         <a-entity id="shelfGypsum"
                   class="interactive"
                   shelf-rock-label="rockId: gypsum"
-                  position="-1.7 0.07 -0.02"
+                  position="-0.99 0.09 -0.02"
                   scale="0.05 0.05 0.05"
                   gltf-model="#gypsumRock">
         </a-entity>
@@ -877,4 +870,3 @@
     </a-scene>
   </body>
 </html>
-

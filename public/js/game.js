@@ -1535,4 +1535,3 @@ AFRAME.registerComponent('opportunity-skin', {
     });
   }
 });
-
