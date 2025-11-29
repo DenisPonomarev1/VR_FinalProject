@@ -2484,5 +2484,242 @@ AFRAME.registerComponent('play-again-button', {
   }
 });
 
+AFRAME.registerSystem('eva', {
+    init: function () {
+        // Suit & tank state
+        this.hasSuit    = false;
+        this.tankMax    = 100;
+        this.tank       = this.tankMax;
+
+        // Rates when outside
+        this.drainRate        = 0.5;   // how fast the suit O2 drains
+        this.refillRate       = 15;  // how fast it refills when inside base
+        this.lowThreshold     = 0.3; // 30%
+        this.criticalThreshold= 0.1; // 10%
+
+        this.isOutside = false;
+
+        this.rig       = null;
+        this.barEl     = null;
+        this.textEl    = null;
+        this.notifEl   = null;
+        this._notifTimeout = null;
+        this._warnedLow      = false;
+        this._warnedCritical = false;
+
+        this.baseBarWidth   = 0.76;
+        this.baseBarCenterX = 0.0;
+        this.baseBarLeftX   = this.baseBarCenterX - this.baseBarWidth / 2;
+
+        this.el.addEventListener('loaded', () => {
+            this.rig    = document.querySelector('#rig');
+            this.barEl  = document.querySelector('#suitOxygenBar');
+            this.textEl = document.querySelector('#suitOxygenText');
+            this.notifEl = document.querySelector('#notificationText');
+
+            // Make HUD bits always-on-top
+            this.makeHudOverlay(this.barEl);
+            this.makeHudOverlay(this.textEl);
+
+            this.updateHUD();
+        });
+    },
+
+    makeHudOverlay: function (el) {
+        if (!el) return;
+        const apply = () => {
+            el.object3D.traverse(node => {
+                if (!node.material) return;
+                const mats = Array.isArray(node.material) ? node.material : [node.material];
+                mats.forEach(m => {
+                    m.depthTest  = false;
+                    m.depthWrite = false;
+                    m.transparent = true;
+                    m.needsUpdate = true;
+                });
+            });
+        };
+        apply();
+        el.addEventListener('object3dset', apply);
+    },
+
+    showNotification: function (msg) {
+        const notif = this.notifEl || document.querySelector('#notificationText');
+        if (!notif) return;
+
+        notif.setAttribute('text', 'value', msg);
+        notif.setAttribute('visible', true);
+
+        if (this._notifTimeout) clearTimeout(this._notifTimeout);
+        this._notifTimeout = setTimeout(() => {
+            notif.setAttribute('visible', false);
+        }, 1500);
+    },
+
+    // Simple "inside base" check (tweak bounds if needed)
+    isInsideBase: function (pos) {
+        // Base roughly around x [-5,5], z [-10,5]
+        return (pos.x > -5 && pos.x < 5 && pos.z > -10 && pos.z < 5);
+    },
+
+    tick: function (time, deltaMs) {
+        if (!this.rig) return;
+
+        const dt  = deltaMs / 1000;
+        const pos = this.rig.object3D.position;
+
+        const inside = this.isInsideBase(pos);
+        this.isOutside = !inside;
+
+        // If wearing suit and outside, drain tank
+        if (this.hasSuit && this.isOutside && this.tank > 0) {
+            this.tank -= this.drainRate * dt;
+            if (this.tank < 0) this.tank = 0;
+        }
+
+        // If wearing suit and inside base, slowly refill tank
+        if (this.hasSuit && !this.isOutside && this.tank < this.tankMax) {
+            this.tank += this.refillRate * dt;
+            if (this.tank > this.tankMax) this.tank = this.tankMax;
+        }
+
+        // Warnings when outside
+        if (this.hasSuit && this.isOutside && this.tankMax > 0) {
+            const ratio = this.tank / this.tankMax;
+            if (!this._warnedLow && ratio <= this.lowThreshold && ratio > this.criticalThreshold) {
+                this.showNotification('Suit O2 low – head back to base!');
+                this._warnedLow = true;
+            }
+            if (!this._warnedCritical && ratio <= this.criticalThreshold) {
+                this.showNotification('Suit O2 CRITICAL! Return to base NOW!');
+                this._warnedCritical = true;
+            }
+        }
+
+        // If tank hits zero outside → reuse hub oxygen game-over
+        if (this.hasSuit && this.isOutside && this.tank <= 0) {
+            const oxy = this.el.systems['oxygen'];
+            if (oxy && !oxy.isDead && typeof oxy.handleGameOver === 'function') {
+                oxy.handleGameOver();
+            }
+        }
+
+        this.updateHUD();
+    },
+
+    updateHUD: function () {
+        if (!this.barEl || !this.textEl) return;
+
+        // Only visible when wearing the suit
+        this.barEl.setAttribute('visible', this.hasSuit);
+        this.textEl.setAttribute('visible', this.hasSuit);
+
+        const ratio = this.tankMax > 0 ? (this.tank / this.tankMax) : 0;
+        const width = Math.max(0.01, this.baseBarWidth * ratio);
+
+        this.barEl.setAttribute('width', width);
+        this.barEl.setAttribute('position', {
+            x: this.baseBarLeftX + width / 2,
+            y: 0,
+            z: 0.01
+        });
+
+        let color = '#00ff9d'; // healthy
+        if (ratio <= this.lowThreshold && ratio > this.criticalThreshold) {
+            color = '#ffdd00'; // warning
+        } else if (ratio <= this.criticalThreshold) {
+            color = '#ff4444'; // critical
+        }
+        this.barEl.setAttribute('color', color);
+
+        const percent = Math.round(ratio * 100);
+        const label = this.hasSuit
+            ? ('Suit O2: ' + percent + '%')
+            : 'Suit off';
+        this.textEl.setAttribute('text', 'value', label);
+    },
+
+    putOnSuit: function () {
+        this.hasSuit = true;
+        this.tank    = this.tankMax;
+        this._warnedLow = false;
+        this._warnedCritical = false;
+        this.showNotification('Suit on – ready to explore Mars!');
+        this.updateHUD();
+    },
+
+    removeSuit: function () {
+        this.hasSuit = false;
+        this.showNotification('Suit removed – breathing base air only.');
+        this.updateHUD();
+    },
+
+    refillTank: function () {
+        this.tank = this.tankMax;
+        this._warnedLow = false;
+        this._warnedCritical = false;
+        this.showNotification('Suit tank refilled.');
+        this.updateHUD();
+    }
+});
+
+AFRAME.registerComponent('eva-suit-station', {
+    init: function () {
+        this.eva = this.el.sceneEl.systems['eva'];
+        this.labelEl = this.el.querySelector('[text]');
+        this.updateLabel = this.updateLabel.bind(this);
+
+        this.onClick = this.onClick.bind(this);
+        this.el.addEventListener('click', this.onClick);
+    },
+
+    remove: function () {
+        this.el.removeEventListener('click', this.onClick);
+    },
+
+    onClick: function () {
+        if (!this.eva) return;
+
+        // If no suit yet → put it on
+        if (!this.eva.hasSuit) {
+            this.eva.putOnSuit();
+        } else {
+            // Suit already on; if we are "inside", refill, else just warn
+            const rig = document.querySelector('#rig');
+            if (rig) {
+                const pos = rig.object3D.position;
+                const inside = this.eva.isInsideBase(pos);
+                if (!inside) {
+                    this.eva.showNotification('You must be inside the base to change tanks.');
+                    return;
+                }
+            }
+
+            if (this.eva.tank < this.eva.tankMax) {
+                this.eva.refillTank();
+            } else {
+                this.eva.removeSuit();
+            }
+        }
+
+        this.updateLabel();
+    },
+
+    updateLabel: function () {
+        if (!this.labelEl || !this.eva) return;
+
+        let txt;
+        if (!this.eva.hasSuit) {
+            txt = 'Put suit on';
+        } else if (this.eva.tank < this.eva.tankMax) {
+            txt = 'Refill tank';
+        } else {
+            txt = 'Remove suit';
+        }
+
+        this.labelEl.setAttribute('text', 'value', txt);
+    }
+});
+
 
 
