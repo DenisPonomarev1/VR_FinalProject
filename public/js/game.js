@@ -157,6 +157,10 @@ AFRAME.registerComponent('fp-controls', {
 
 
     tick(time, deltaMs) {
+         // Stop moving if oxygen system says player is "dead"
+        const oxy = this.el.sceneEl.systems['oxygen'];
+        if (oxy && oxy.isDead) return;
+
         const dt    = Math.min(0.05, deltaMs / 1000);
         const speed = this.data.speed;
         const pos   = this.el.object3D.position;
@@ -2238,6 +2242,246 @@ AFRAME.registerComponent('shelf-rock-label', {
             this.inventory.showNotification(pretty + suffix);
         }
     }
+});
+
+AFRAME.registerSystem('oxygen', {
+    init: function () {
+        // Config
+        this.maxO2 = 100;
+        this.level = this.maxO2;
+
+        // O2 rates (per second)
+        this.leakRateBothOpen = 10;   // lose 10 O2 per second when *both* doors are open
+        this.regenRateClosed  = 5;    // regain 5 O2 per second when both doors closed
+        this.leakRateOneOpen  = 2;   // small leak when only one door is open
+        // Warning thresholds (fractions of max)
+
+        this.warnThreshold     = 0.4;  // begin red overlay under 40%
+        this.criticalThreshold = 0.2;  // stronger blinking under 20%
+
+        this.innerOpen  = false;
+        this.outerOpen  = false;
+        this.isDead     = false;
+
+        // HUD elements
+        this.barEl     = null;
+        this.textEl    = null;
+        this.overlayEl = null;
+
+        // Doors
+        this.innerDoor = null;
+        this.outerDoor = null;
+
+        // Needed for HUD updates (match #oxygenBar in HTML)
+        this.baseBarWidth   = 0.76;     
+        this.baseBarCenterX = 0.0;    
+        this.baseBarLeftX   = this.baseBarCenterX - this.baseBarWidth / 2; 
+
+        this.onDoorStateChanged = this.onDoorStateChanged.bind(this);
+
+        this.el.addEventListener('loaded', () => {
+            this.barEl     = document.querySelector('#oxygenBar');
+            this.textEl    = document.querySelector('#oxygenText');
+            this.overlayEl = document.querySelector('#oxygenWarningOverlay');
+            this.barBgEl   = document.querySelector('#oxygenBarBG');
+
+            this.makeHudOverlay(this.barBgEl);
+            this.innerDoor = document.querySelector('#innerDoorHinge');
+            this.outerDoor = document.querySelector('#outerDoorHinge');
+            this.playAgainButtonEl = document.querySelector('#playAgainButton');
+
+
+            if (this.innerDoor) {
+                this.innerDoor.addEventListener('door-state-changed', this.onDoorStateChanged);
+            }
+            if (this.outerDoor) {
+                this.outerDoor.addEventListener('door-state-changed', this.onDoorStateChanged);
+            }
+
+            // Make HUD elements ignore depth so they are never hidden by walls
+            this.makeHudOverlay(this.barEl);
+            this.makeHudOverlay(this.textEl);
+            this.makeHudOverlay(this.playAgainButtonEl);
+
+
+            // Initial HUD sync
+            this.updateHUD(0);
+        });
+    },
+
+    // turn any entity into a "always-on-top" HUD element
+    makeHudOverlay: function (el) {
+        if (!el) return;
+
+        const apply = () => {
+            el.object3D.traverse(node => {
+                if (!node.material) return;
+
+                const mats = Array.isArray(node.material)
+                    ? node.material
+                    : [node.material];
+
+                mats.forEach(m => {
+                    m.depthTest = false;
+                    m.depthWrite = false;
+                    m.transparent = true;
+                    m.needsUpdate = true;
+                });
+            });
+        };
+
+        // Apply now (in case mesh already exists)
+        apply();
+        el.addEventListener('object3dset', apply);
+    },
+
+    remove: function () {
+        if (this.innerDoor) {
+            this.innerDoor.removeEventListener('door-state-changed', this.onDoorStateChanged);
+        }
+        if (this.outerDoor) {
+            this.outerDoor.removeEventListener('door-state-changed', this.onDoorStateChanged);
+        }
+    },
+
+    onDoorStateChanged: function (evt) {
+        if (!evt || !evt.target || !evt.detail) return;
+        const open = !!evt.detail.open;
+        const id   = evt.target.id;
+
+        if (id === 'innerDoorHinge') {
+            this.innerOpen = open;
+        } else if (id === 'outerDoorHinge') {
+            this.outerOpen = open;
+        }
+    },
+
+    tick: function (time, deltaMs) {
+        if (this.isDead) return;
+
+        const dt = deltaMs / 1000;
+
+        let dO2 = 0;
+
+        // Both open → big leak
+        if (this.innerOpen && this.outerOpen) {
+            dO2 -= this.leakRateBothOpen * dt;
+
+        // Exactly one open → small leak
+        } else if (this.innerOpen !== this.outerOpen) {
+            // XOR: true if one is open and the other is closed
+            dO2 -= this.leakRateOneOpen * dt;
+
+        // Both closed → regen
+        } else if (!this.innerOpen && !this.outerOpen) {
+            dO2 += this.regenRateClosed * dt;
+        }
+
+
+        if (dO2 !== 0) {
+            this.level += dO2;
+            if (this.level > this.maxO2) this.level = this.maxO2;
+            if (this.level < 0)         this.level = 0;
+        }
+
+        this.updateHUD(time);
+
+        if (this.level <= 0 && !this.isDead) {
+            this.handleGameOver();
+        }
+    },
+
+    updateHUD: function (timeMs) {
+        const ratio = this.maxO2 > 0 ? (this.level / this.maxO2) : 0;
+
+        if (this.barEl) {
+            const width = Math.max(0.01, this.baseBarWidth * ratio);
+            this.barEl.setAttribute('width', width);
+            this.barEl.setAttribute('position', {
+                x: this.baseBarLeftX + width / 2,
+                y: 0,
+                z: 0.01
+            });
+
+            // Color shift from cyan -> yellow -> red
+            let color = '#00e5ff'; // healthy
+            if (ratio < this.warnThreshold && ratio >= this.criticalThreshold) {
+                color = '#ffdd00'; // warning
+            } else if (ratio < this.criticalThreshold) {
+                color = '#ff4444'; // critical
+            }
+            this.barEl.setAttribute('color', color);
+        }
+
+        if (this.textEl) {
+            const percent = Math.round(ratio * 100);
+            this.textEl.setAttribute('text', 'value', 'Hub O2: ' + percent + '%');
+        }
+
+        if (this.overlayEl) {
+            if (ratio >= this.warnThreshold) {
+                this.overlayEl.setAttribute('visible', false);
+                this.overlayEl.setAttribute('material', 'opacity', 0);
+            } else {
+                // Show overlay
+                this.overlayEl.setAttribute('visible', true);
+
+                const t = (timeMs || 0) / 1000;
+                let baseOpacity;
+
+                if (ratio < this.criticalThreshold) {
+                    // Critical: stronger + blinking
+                    const severity = (this.criticalThreshold - ratio) / this.criticalThreshold;
+                    const blink = 0.5 + 0.5 * Math.sin(t * 6.0);
+                    baseOpacity = 0.3 + 0.4 * severity * blink; // up to ~0.7
+                } else {
+                    // Mild warning: steady subtle red
+                    const severity = (this.warnThreshold - ratio) / this.warnThreshold;
+                    baseOpacity = 0.15 + 0.25 * severity; // up to ~0.4
+                }
+
+                this.overlayEl.setAttribute('material', 'opacity', baseOpacity);
+            }
+        }
+    },
+
+    handleGameOver: function () {
+        this.isDead = true;
+        this.level  = 0;
+        this.updateHUD(0);
+
+        // Show game over text
+        const notif = document.querySelector('#notificationText');
+        if (notif) {
+            notif.setAttribute('text', 'value', 'OXYGEN DEPLETED\nGAME OVER');
+            notif.setAttribute('visible', true);
+            notif.setAttribute('text', 'color', '#220b0bff');
+        }
+        // show the play again button
+        if (this.playAgainButtonEl) {
+        this.playAgainButtonEl.setAttribute('visible', true);
+    }
+
+        // Emit an event in case other systems/components care
+        this.el.emit('oxygen-depleted');
+
+    }
+});
+
+AFRAME.registerComponent('play-again-button', {
+  init: function () {
+    this.onClick = this.onClick.bind(this);
+    this.el.addEventListener('click', this.onClick);
+  },
+
+  remove: function () {
+    this.el.removeEventListener('click', this.onClick);
+  },
+
+  onClick: function () {
+    // Reload the whole page to restart everything
+    window.location.reload();
+  }
 });
 
 
