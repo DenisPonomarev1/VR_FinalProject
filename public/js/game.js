@@ -96,7 +96,6 @@ AFRAME.registerComponent('fp-controls', {
         // 2) Olympus Mons 
         const olympus = document.querySelector('#olympusMons');
         if (olympus) {
-            // If the mesh is already there (sometimes it is):
             const existing = olympus.getObject3D('mesh');
             if (existing) {
             addMeshesFrom(existing);
@@ -251,43 +250,55 @@ AFRAME.registerComponent('fp-controls', {
 
 // Mineral analysis texts for the lab console
 const MINERAL_ANALYSIS_TEXT = {
-    basalt: (
-    'Basalt is a dark, fine-grained volcanic rock rich in iron and magnesium, about 90% of Mars is covered by basalts\n' +
-    'On Mars, many lava plains and much of the crust are basaltic, showing that the planet once had\n' +
-    'widespread volcanic eruptions and a hot, active interior.\n\n' +
+  basalt: (
+    'Basalt is a dark volcanic rock that forms when runny lava cools down.\n' +
+    'On Mars, huge lava flows spread out and froze into big basalt plains.\n' +
+    'This tells us Mars used to have lots of volcanoes and a very hot inside.\n\n' +
     'Key physical properties:\n' +
     '- Typical color: dark gray to black\n' +
-    '- Density: ~2.8–3.0 g/cm³\n' +
-    '- Hardness: ~6 on the Mohs scale\n' +
-    '- Texture: fine-grained, often with tiny crystals\n' +
-    '- Main minerals: pyroxene, plagioclase feldspar, olivine'
-    ),
+    '- Hardness: about 6 on the Mohs scale (quite hard)\n' +
+    '- Texture: fine-grained, with crystals too small to see easily\n' +
+    '- Fun fact: much of Earth\'s ocean floor is also made of basalt'
+  ),
 
-    dunite: (
-    'Dunite is an ultramafic igneous rock made mostly of the mineral olivine.\n' +
-    'On Mars, olivine-rich dunite points to material that formed deep in the mantle or in very primitive lavas,\n' +
-    'preserving clues about the planet’s early interior and limited water-driven alteration.\n\n' +
+  dunite: (
+    'Dunite is a special rock that is made mostly of one green mineral\n' +
+    'called olivine. It usually forms deep inside a planet, where it is\n' +
+    'very hot and squeezed by high pressure.\n' +
+    'On Mars, finding dunite means we are seeing rocks that may have come\n' +
+    'from deep in the planet\'s interior.\n\n' +
     'Key physical properties:\n' +
     '- Typical color: olive green to dark green-brown\n' +
-    '- Density: ~3.2–3.4 g/cm³\n' +
-    '- Hardness: ~6.5–7 on the Mohs scale\n' +
-    '- Texture: coarse to granular, dominated by olivine crystals\n' +
-    '- Main minerals: >90% olivine, with minor pyroxene and spinel'
-    ),
+    '- Hardness: about 6.5–7 on the Mohs scale (very hard)\n' +
+    '- Texture: chunky or granular, made of lots of olivine crystals\n' +
+    '- Special note: mostly (>90%) made of olivine'
+  ),
 
-    hematite: (
-    'Hematite is an iron oxide mineral (Fe₂O₃) that gives Mars much of its rusty-red color.\n' +
-    'On Mars, coarse hematite often forms in the presence of liquid water, such as in lakes,\n' +
-    'groundwater systems, or hot springs. Its presence is a strong clue that some regions once\n' +
-    'had standing or slowly moving water and more active chemical weathering.\n\n' +
+  hematite: (
+    'Hematite is an iron mineral that often looks metallic gray or\n' +
+    'reddish-brown. When it is crushed into powder, it makes a red streak.\n' +
+    'On Mars, some hematite forms when liquid water moves through rocks,\n' +
+    'so finding it is a big clue that water once flowed or pooled there.\n\n' +
     'Key physical properties:\n' +
-    '- Typical color: metallic gray to reddish-brown\n' +
-    '- Streak: reddish\n' +
-    '- Density: ~5.0–5.3 g/cm³\n' +
-    '- Hardness: ~5.5–6.5 on the Mohs scale'
-)
+    '- Typical color: shiny metallic gray or rusty red-brown\n' +
+    '- Streak: reddish (the color of the powder)\n' +
+    '- Hardness: about 5.5–6.5 on the Mohs scale\n' +
+    '- Fun fact: hematite is one reason Mars looks like the "Red Planet"'
+  ),
 
+  gypsum: (
+    'Gypsum is a soft, light-colored mineral made of calcium, sulfur, and water.\n' +
+    'On Mars, gypsum often forms when salty water slowly dries up and leaves\n' +
+    'its minerals behind. Finding gypsum is a big clue that liquid water once\n' +
+    'stayed in that place for a long time.\n\n' +
+    'Key physical properties:\n' +
+    '- Typical color: white to pale gray, sometimes a bit pink\n' +
+    '- Hardness: about 2 on the Mohs scale (very soft)\n' +
+    '- Texture: can be powdery, chunky, or in long clear crystals\n' +
+    '- Special note: sometimes forms clear crystals called "selenite"'
+  )
 };
+
 
 
 AFRAME.registerSystem('inventory', {
@@ -869,6 +880,70 @@ AFRAME.registerComponent('inventory-button', {
     }
 });
 
+AFRAME.registerSystem('score', {
+    init: function () {
+        this.points = 0;
+        this.scoreTextEl = null;
+
+        this.popupTimeout = null;// to clear old timers
+
+        // Try to find the score text after the scene is ready
+        this.findScoreText = this.findScoreText.bind(this);
+        this.el.addEventListener('loaded', this.findScoreText);
+    },
+
+    findScoreText: function () {
+        this.scoreTextEl = document.querySelector('#scoreText');
+        this.updatePanel();
+    },
+
+    add: function (amount) {
+        this.points += amount;
+        if (this.points < 0) this.points = 0;
+
+        this.updatePanel();
+
+        // Broadcast if anything else wants to react
+        this.el.emit('score-changed', { points: this.points });
+
+        //show a popup when we get a point
+        if (amount > 0) {
+            this.showScorePopup(amount);
+        }
+    },
+
+    get: function () {
+        return this.points;
+    },
+
+    updatePanel: function () {
+        if (!this.scoreTextEl) return;
+        this.scoreTextEl.setAttribute(
+            'text',
+            'value',
+            'Explorer Points: ' + this.points
+        );
+    },
+
+        showScorePopup: function (amount) {
+        const notif = document.querySelector('#notificationText');
+        if (!notif) return;
+
+        const label = `+${amount} Explorer Point${amount === 1 ? '' : 's'}!`;
+
+        notif.setAttribute('text', 'value', label);
+        notif.setAttribute('visible', true);
+
+        // If an old popup is still fading, cancel it
+        if (this.popupTimeout) {
+            clearTimeout(this.popupTimeout);
+        }
+
+        this.popupTimeout = setTimeout(() => {
+            notif.setAttribute('visible', false);
+        }, 1200);
+    }
+});
 
 
 AFRAME.registerComponent('lab-mineral-button', {
@@ -913,7 +988,7 @@ AFRAME.registerComponent('lab-mineral-button', {
             return;
         }
 
-        // Hide the "What mineral..." question, show Back button
+        // Hide the question, show Back button
         if (this.questionEl) {
             this.questionEl.setAttribute('visible', false);
         }
@@ -1132,7 +1207,12 @@ AFRAME.registerComponent('rover-quiz', {
     init: function () {
         const el = this.el;
 
-        this.hasReportedLocated = false; //for the mission list
+        this.hasReportedLocated = false; // for the mission list
+        this.hasAwardedPoint = false;    // for score
+        this.options = [];               // 🔹 store answer buttons so we can remove them
+
+        // Access score system
+        this.score = this.el.sceneEl.systems['score'];
 
         // Find rover model (the clickable mesh)
         this.roverModel = el.querySelector('[gltf-model]');
@@ -1217,7 +1297,10 @@ AFRAME.registerComponent('rover-quiz', {
     createOption: function (label, value, x, y) {
         const option = document.createElement('a-entity');
         option.setAttribute('class', 'interactive rover-quiz-option');
-        option.setAttribute('geometry', 'primitive: box; width: 0.55; height: 0.22; depth: 0.03');
+        option.setAttribute(
+            'geometry',
+            'primitive: box; width: 0.55; height: 0.22; depth: 0.03'
+        );
         option.setAttribute('material', 'color: #263238');
         option.setAttribute('position', `${x} ${y} 0.02`);
         option.setAttribute('data-value', value);
@@ -1240,6 +1323,9 @@ AFRAME.registerComponent('rover-quiz', {
         });
 
         this.panel.appendChild(option);
+
+        // 🔹 keep track of options so we can remove them later
+        this.options.push(option);
     },
 
     onRoverClick: function () {
@@ -1266,7 +1352,7 @@ AFRAME.registerComponent('rover-quiz', {
             }
         }
 
-        if (this.questionEl){
+        if (this.questionEl) {
             this.questionEl.setAttribute('visible', false);
         }
 
@@ -1283,6 +1369,22 @@ AFRAME.registerComponent('rover-quiz', {
         );
 
         this.introEl.setAttribute('text', 'value', newText);
+
+        // 🔹 Remove / hide answer buttons so the quiz can't be redone
+        if (this.options && this.options.length) {
+            this.options.forEach(opt => {
+                if (opt.parentNode) {
+                    opt.parentNode.removeChild(opt);
+                }
+            });
+            this.options = [];
+        }
+
+        // 🔹 Award 1 point ONLY if the answer is correct, and only once
+        if (isCorrect && !this.hasAwardedPoint && this.score && this.score.add) {
+            this.score.add(1);       // your score system can show the +1 popup
+            this.hasAwardedPoint = true;
+        }
     },
 
     remove: function () {
@@ -1292,14 +1394,18 @@ AFRAME.registerComponent('rover-quiz', {
     }
 });
 
+
 AFRAME.registerComponent('olympus-quiz', {
     init: function () {
         const el = this.el;
 
         this.hasReportedComplete = false; // for mission log
+        this.hasAwardedPoint = false;
 
         // Keep track of answer buttons so we can remove/hide them later
         this.options = [];
+        // for the score system
+        this.score = this.el.sceneEl.systems['score'];
 
         // --- QUIZ PANEL ---
 
@@ -1466,6 +1572,11 @@ AFRAME.registerComponent('olympus-quiz', {
 
         this.revealPhoto();
 
+        if (isCorrect && !this.hasAwardedPoint && this.score && this.score.add) {
+            this.score.add(1);
+            this.hasAwardedPoint = true;
+        }
+
         // Tell the scene that the Olympus mission is complete 
         if (!this.hasReportedComplete && this.el.sceneEl) {
             this.hasReportedComplete = true;
@@ -1499,10 +1610,10 @@ AFRAME.registerComponent('opportunity-quiz', {
         intro: {
             type: 'string',
             default:
-                'Opportunity was one of NASA\'s Mars Exploration Rovers.\n' +
-                'It landed in 2004 and far outlived its 90-day design life,\n' +
-                'exploring Mars for almost 15 years. It found strong evidence\n' +
-                'for past water, including hematite “blueberries” and sulfate-rich rocks.'
+                'Opportunity was a small robot rover that landed on Mars in 2004.\n' +
+                'It was only supposed to work for 90 days, but it kept exploring\n' +
+                'for almost 15 years! It found strong clues that liquid water used\n' +
+                'to flow on Mars, like round “blueberry” rocks made of hematite.'
         }
     },
 
@@ -1510,6 +1621,10 @@ AFRAME.registerComponent('opportunity-quiz', {
         const el = this.el;
 
         this.hasReportedLocated = false; // for mission log
+        this.hasAwardedPoint = false;    // for score
+
+        // Access score system
+        this.score = this.el.sceneEl.systems['score'];
 
         // Find rover model (the clickable mesh)
         this.roverModel = el.querySelector('[gltf-model]');
@@ -1544,25 +1659,25 @@ AFRAME.registerComponent('opportunity-quiz', {
 
         // Background
         const bg = document.createElement('a-plane');
-        bg.setAttribute('position', '-0.017 0.158 -0.059');
+        bg.setAttribute('position', '-0.017 0.245 -0.059');
         bg.setAttribute('width', 2.4);
         bg.setAttribute('height', 1.9);
-        bg.setAttribute('material', 'color: #111; opacity: 0.9; side: double;');
+        bg.setAttribute('material', 'color: #000000ff; opacity: 0.9; side: double;');
         panel.appendChild(bg);
 
         // Title
         const titleEl = document.createElement('a-entity');
-        titleEl.setAttribute('position', '0 1.2 0.09');
+        titleEl.setAttribute('position', '0 1.3 0.09');
         titleEl.setAttribute('text', {
             value: this.data.title,
             align: 'center',
             width: 2.3,
-            color: '#1b1717ff',
+            color: '#460000ff',
             wrapCount: 32
         });
         panel.appendChild(titleEl);
 
-        // Intro
+        // Intro (kid-friendly)
         const introEl = document.createElement('a-entity');
         introEl.setAttribute('position', '0 0.3 0.01');
         introEl.setAttribute('text', {
@@ -1575,12 +1690,13 @@ AFRAME.registerComponent('opportunity-quiz', {
         panel.appendChild(introEl);
         this.introEl = introEl;
 
-        // Question
+        // Question (kid-friendly)
         const questionEl = document.createElement('a-entity');
         questionEl.setAttribute('position', '0 -0.33 -0.026');
         questionEl.setAttribute('text', {
             value:
-                'How did Opportunity reach the Martian surface during landing?',
+                'How did Opportunity safely land on the surface of Mars?\n' +
+                'Think about how you might protect a toy if you dropped it!',
             align: 'center',
             width: 2.2,
             color: '#ffffff',
@@ -1589,10 +1705,10 @@ AFRAME.registerComponent('opportunity-quiz', {
         panel.appendChild(questionEl);
         this.questionEl = questionEl;
 
-        // Answer options (one row of three)
-        this.createOption('Airbags + parachute', 'airbags', -1.14, -0.7); // correct
-        this.createOption('Sky crane + cables', 'skycrane', -0.06, -0.7);
-        this.createOption('Powered landing on legs', 'legs', 0.953, -0.7);
+        // Answer options (one row of three) – still the same correct one
+        this.createOption('Big airbags + a parachute', 'airbags',  -1.14, -0.7); // correct
+        this.createOption('Lowered by a sky crane',     'skycrane', -0.06, -0.7);
+        this.createOption('Rocket legs like a spaceship', 'legs',    0.953, -0.7);
 
         // Play animation button (initially hidden)
         const playButton = document.createElement('a-entity');
@@ -1611,7 +1727,7 @@ AFRAME.registerComponent('opportunity-quiz', {
         const playLabel = document.createElement('a-entity');
         playLabel.setAttribute('position', '0 0 0.02');
         playLabel.setAttribute('text', {
-            value: 'Play deployment animation',
+            value: 'Play landing animation',
             align: 'center',
             width: 2,
             color: '#ffffff'
@@ -1677,6 +1793,7 @@ AFRAME.registerComponent('opportunity-quiz', {
             this.hintEl.setAttribute('visible', false);
             this.hintHidden = true;
         }
+
         const visible = this.panel.getAttribute('visible');
         this.panel.setAttribute('visible', !visible);
     },
@@ -1685,14 +1802,24 @@ AFRAME.registerComponent('opportunity-quiz', {
         const correct = 'airbags';
         const isCorrect = (value === correct);
 
+        if (window.SoundManager) {
+            if (isCorrect) {
+                window.SoundManager.playSound('quizCorrect');
+            } else {
+                window.SoundManager.playSound('quizWrong');
+            }
+        }
+
         const explanation =
-            'Opportunity landed using a heat shield, parachute, and large airbags.\n' +
-            'The lander hit the atmosphere at high speed, slowed by the parachute,\n' +
-            'then bounced and rolled across the Martian surface until it came to rest.\n' +
-            'Later rovers like Curiosity and Perseverance used a \"sky crane\" system instead.';
+            'To land safely, Opportunity was wrapped in huge air bags.\n' +
+            'A parachute helped it slow down in the thin Martian air.\n' +
+            'Then the lander hit the ground and bounced and rolled\n' +
+            'like a giant padded ball until it finally stopped.\n\n' +
+            'Later rovers like Curiosity and Perseverance used a different\n' +
+            'system called a “sky crane” instead of bouncing air bags.';
 
         const prefix = isCorrect ? 'Correct! 🎉\n\n' : 'Nice try.\n\n';
-        const text = prefix + explanation + '\n\nYou can now play a deployment animation.';
+        const text = prefix + explanation + '\n\nYou can now play a landing animation.';
 
         if (this.introEl) {
             this.introEl.setAttribute('visible', false);
@@ -1703,7 +1830,7 @@ AFRAME.registerComponent('opportunity-quiz', {
             this.questionEl.setAttribute('text', 'value', text);
         }
 
-        // Remove answer buttons
+        // Remove answer buttons so the quiz can’t be repeated
         if (this.options && this.options.length) {
             this.options.forEach(opt => {
                 if (opt.parentNode) opt.parentNode.removeChild(opt);
@@ -1711,17 +1838,27 @@ AFRAME.registerComponent('opportunity-quiz', {
             this.options = [];
         }
 
-        // Show "Play deployment animation" button
+        // Show "Play landing animation" button
         if (this.playButton) {
             this.playButton.setAttribute('visible', true);
+        }
+
+        // Award 1 point the first time the quiz is answered correctly
+        if (isCorrect && !this.hasAwardedPoint && this.score && this.score.add) {
+            this.score.add(1);
+            this.hasAwardedPoint = true;
         }
     },
 
     playDeploymentAnimation: function () {
         if (!this.roverModel) return;
 
-        // Start glTF animation once, from the beginning.
-        // Requires aframe-extras (which you already include).
+        // Allow replay: reset/remove any existing animation-mixer and re-add it
+        const hasMixer = this.roverModel.getAttribute('animation-mixer');
+        if (hasMixer) {
+            this.roverModel.removeAttribute('animation-mixer');
+        }
+
         this.roverModel.setAttribute('animation-mixer', {
             clip: '*',
             loop: 'once',
@@ -1736,6 +1873,7 @@ AFRAME.registerComponent('opportunity-quiz', {
         }
     }
 });
+
 
 AFRAME.registerComponent('opportunity-skin', {
   init: function () {
@@ -1826,6 +1964,11 @@ AFRAME.registerComponent('perseverance-quiz', {
         const el = this.el;
 
         this.hasReportedLocated = false;// for mission log
+
+        this.hasAwardedPoint = false;   // NEW
+
+        // Access score system
+        this.score = this.el.sceneEl.systems['score'];
 
         // Find rover model (clickable mesh)
         this.roverModel = el.querySelector('[gltf-model]');
@@ -2018,11 +2161,17 @@ AFRAME.registerComponent('perseverance-quiz', {
             this.options = [];
         }
 
-        // Optional: still ping a Jezero crater entity for a fun effect
+    
         const crater = document.querySelector('#jezeroCrater');
         if (crater) {
-            crater.emit('highlight-crater'); // you can listen for this in another component if you want
+            crater.emit('highlight-crater'); 
         }
+
+        if (isCorrect && !this.hasAwardedPoint && this.score && this.score.add) {
+            this.score.add(1);
+            this.hasAwardedPoint = true;
+        }
+
     },
 
     remove: function () {
