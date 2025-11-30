@@ -12,11 +12,13 @@
     <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
     <script src="js/sound-manager.js"></script>
     <script src="js/game.js"></script>
+    <script src="js/npc-dialogue.js"></script>  
     <style>
       html, body { margin:0; height:100%; background:#000; overflow:hidden; }
     </style>
   </head>
   <body>
+
     <a-scene background="color:#101218">
       <a-assets>
         <a-asset-item id="doorGLB" response-type="arraybuffer" src="assets/door.glb"></a-asset-item>
@@ -33,7 +35,7 @@
         <a-asset-item id="opportunityRover" response-type="arraybuffer" src="assets/opportunity.glb"></a-asset-item>
         <a-asset-item id="perseveranceRover" response-type="arraybuffer" src="assets/perseverance.glb"></a-asset-item>
         <a-asset-item id="jezeroCraterGLB" response-type="arraybuffer" src="assets/jezeroCrater.glb"></a-asset-item>
-
+        <a-asset-item id="astronaut_missions" response-type="arraybuffer" src="assets/astronaut-missions.glb"></a-asset-item>
 
 
 
@@ -80,6 +82,32 @@
                 look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: true">
         <a-entity cursor="rayOrigin: mouse"
                   raycaster="objects: .interactive; far: 20"></a-entity>
+        
+        <!--Helmet overlay-->
+        <a-image id="helmetOverlay"
+             src="#helmetOverlayImg"
+             position="0 0 -0.6"
+             width="2"
+             height="1"
+             material="transparent: true; opacity: 0.5; depthTest: false; side: double"></a-image>
+             visible="false">
+        </a-image>
+        
+        <!--Foggy breath effect-->
+        <a-plane id="breathFog"
+           position="0 0 -0.6"
+           width="2"
+           height="1"
+           color="#ffffff"
+           material="transparent: true; opacity: 0; depthTest: false; side: double"
+           animation="property: material.opacity;
+                      dir: alternate;
+                      dur: 1600;
+                      from: 0;
+                      to: 0.15;
+                      loop: true"
+           visible="false">
+        </a-plane>
 
         <!-- HUD notification -->
         <a-entity id="notificationText"
@@ -217,6 +245,8 @@
                       easing="easeInOutSine"
                       repeat="indefinite"></a-animation>
       </a-entity>
+
+      
 
 
       <a-entity id="phobos" position="4 1.78 3" scale="0.03 0.03 0.03"
@@ -1210,6 +1240,35 @@
                       olympus-quiz>
             </a-entity>
       </a-entity>
+
+      <a-entity 
+        id="npc-astronaut"
+        gltf-model="#astronaut_missions"
+        position="-3 0 -14.5"
+        scale="1 1 1"
+        rotation="0 180 0"
+        animation-mixer
+        npc-dialogue="npcName: Commander Astra">
+    <a-entity 
+    id="npcHint"
+    position="0 2.5 0"
+    visible="true"
+    text="value: New Mission Available! Click me!;
+          align: center;
+          width: 4;
+          color: #FFD700;"
+      animation="property: position;
+              from: 0 2.5 0;
+              to: 0 2.7 0;
+              dir: alternate;
+              loop: true;
+              dur: 1000;
+              easing: easeInOutSine">
+    </a-entity>
+
+      </a-entity>
+
+      
 
 
 
