@@ -18,6 +18,7 @@
     </style>
   </head>
   <body>
+
     <a-scene background="color:#101218">
       <a-assets>
         <a-asset-item id="doorGLB" response-type="arraybuffer" src="assets/door.glb"></a-asset-item>
@@ -81,6 +82,32 @@
                 look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: true">
         <a-entity cursor="rayOrigin: mouse"
                   raycaster="objects: .interactive; far: 20"></a-entity>
+        
+        <!--Helmet overlay-->
+        <a-image id="helmetOverlay"
+             src="#helmetOverlayImg"
+             position="0 0 -0.6"
+             width="2"
+             height="1"
+             material="transparent: true; opacity: 0.5; depthTest: false; side: double"></a-image>
+             visible="false">
+        </a-image>
+        
+        <!--Foggy breath effect-->
+        <a-plane id="breathFog"
+           position="0 0 -0.6"
+           width="2"
+           height="1"
+           color="#ffffff"
+           material="transparent: true; opacity: 0; depthTest: false; side: double"
+           animation="property: material.opacity;
+                      dir: alternate;
+                      dur: 1600;
+                      from: 0;
+                      to: 0.15;
+                      loop: true"
+           visible="false">
+        </a-plane>
 
         <!-- HUD notification -->
         <a-entity id="notificationText"
