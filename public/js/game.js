@@ -2267,6 +2267,8 @@ AFRAME.registerSystem('oxygen', {
         this.barEl     = null;
         this.textEl    = null;
         this.overlayEl = null;
+        this.helmetOl  = null;
+        this.breathOl  = null; 
 
         // Doors
         this.innerDoor = null;
@@ -2284,6 +2286,8 @@ AFRAME.registerSystem('oxygen', {
             this.textEl    = document.querySelector('#oxygenText');
             this.overlayEl = document.querySelector('#oxygenWarningOverlay');
             this.barBgEl   = document.querySelector('#oxygenBarBG');
+            this.helmetOl  = document.querySelector('#helmetOverlay');
+            this.breathOl  = document.querySelector('#breathFog');
 
             this.makeHudOverlay(this.barBgEl);
             this.innerDoor = document.querySelector('#innerDoorHinge');
@@ -2302,6 +2306,8 @@ AFRAME.registerSystem('oxygen', {
             this.makeHudOverlay(this.barEl);
             this.makeHudOverlay(this.textEl);
             this.makeHudOverlay(this.playAgainButtonEl);
+            this.makeHudOverlay(this.helmetOl);
+            this.makeHudOverlay(this.breathOl);
 
 
             // Initial HUD sync
@@ -2502,6 +2508,8 @@ AFRAME.registerSystem('eva', {
         this.rig       = null;
         this.barEl     = null;
         this.textEl    = null;
+        this.helmetOl  = null;
+        this.breathOl  = null;
         this.notifEl   = null;
         this._notifTimeout = null;
         this._warnedLow      = false;
@@ -2516,10 +2524,14 @@ AFRAME.registerSystem('eva', {
             this.barEl  = document.querySelector('#suitOxygenBar');
             this.textEl = document.querySelector('#suitOxygenText');
             this.notifEl = document.querySelector('#notificationText');
+            this.helmetOl = document.querySelector('#helmetOverlay');
+            this.breathOl = document.querySelector('#breathFog');
 
             // Make HUD bits always-on-top
             this.makeHudOverlay(this.barEl);
             this.makeHudOverlay(this.textEl);
+            this.makeHudOverlay(this.helmetOl);
+            this.makeHudOverlay(this.breathOl);
 
             this.updateHUD();
         });
@@ -2613,6 +2625,8 @@ AFRAME.registerSystem('eva', {
         // Only visible when wearing the suit
         this.barEl.setAttribute('visible', this.hasSuit);
         this.textEl.setAttribute('visible', this.hasSuit);
+        this.helmetOl.setAttribute('visible', this.hasSuit);
+        this.breathOl.setAttribute('visible', this.hasSuit);
 
         const ratio = this.tankMax > 0 ? (this.tank / this.tankMax) : 0;
         const width = Math.max(0.01, this.baseBarWidth * ratio);
