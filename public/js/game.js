@@ -323,6 +323,10 @@ AFRAME.registerSystem('inventory', {
         }
 
         this.collected.add(id);
+        if (window.gameState) {
+            window.gameState.rocksCollected = this.collected.size;
+            console.log('✅ Rocks collected:', window.gameState.rocksCollected);
+        }
         this.updatePanel();
         this.showNotification('Collected: ' + this.prettyName(id) + ' rock');
 
@@ -338,6 +342,7 @@ AFRAME.registerSystem('inventory', {
                 collected: Array.from(this.collected)
             });
         }
+        this.checkMissionCompletion();
 
         return true;
 },
@@ -349,6 +354,12 @@ AFRAME.registerSystem('inventory', {
 
         this.analyzed.add(id);
 
+        //update gamestatefor the npc
+        if (window.gameState) {
+        window.gameState.rocksAnalyzed = this.analyzed.size;
+        console.log('✅ Rocks analyzed:', window.gameState.rocksAnalyzed);
+        }
+
         // Notify listeners (like mission-panel) that analysis progress changed
         if (this.el) {
             this.el.emit('analysis-changed', {
@@ -356,8 +367,151 @@ AFRAME.registerSystem('inventory', {
             });
         }
 
+        this.checkMissionCompletion();
+
         return true;
     },
+
+    checkMissionCompletion: function() {
+    const gameState = window.gameState || {};
+    
+    // Mission 2: Collect & Analyze 4 rocks
+    if (gameState.mission2Started && !gameState.mission2Completed) {
+        if (this.collected.size >= 4 && this.analyzed.size >= 4) {
+            gameState.mission2Completed = true;
+            this.showMissionCompletePopup('Mission 2 Complete!', 'Mars Field Geologist Certificate', 'You have successfully collected and analyzed all mineral samples. Return to Commander Astra for your next mission.');
+            console.log('🎉 Mission 2 completed!');
+        }
+    }
+    
+    // Mission 3: Find 3 rovers
+    if (gameState.mission3Started && !gameState.mission3Completed) {
+        const roversFound = (gameState.sojournerFound ? 1 : 0) + 
+                           (gameState.opportunityFound ? 1 : 0) + 
+                           (gameState.perseveranceFound ? 1 : 0);
+        
+        if (roversFound >= 3) {
+            gameState.mission3Completed = true;
+            this.showMissionCompletePopup('Mission 3 Complete!', 'Mars Mission Historian', 'You have located and learned about all three historic Mars rovers. Return to Commander Astra for your next mission.');
+            console.log('🎉 Mission 3 completed!');
+        }
+    }
+},
+
+showMissionCompletePopup: function(title, reward, description) {
+    // Create popup if it doesn't exist
+    let popup = document.querySelector('#missionCompletePopup');
+    
+    if (!popup) {
+        popup = this.createMissionCompletePopup();
+    }
+    
+    // Update content
+    const titleEl = popup.querySelector('#popupTitle');
+    const rewardEl = popup.querySelector('#popupReward');
+    const descEl = popup.querySelector('#popupDescription');
+    
+    if (titleEl) titleEl.setAttribute('text', 'value', title);
+    if (rewardEl) titleEl.setAttribute('text', 'value', '🏆 ' + reward);
+    if (descEl) descEl.setAttribute('text', 'value', description);
+    
+    // Show popup
+    popup.setAttribute('visible', 'true');
+    
+    // Play success sound
+    if (window.SoundManager) {
+        window.SoundManager.playSound('quizCorrect');
+    }
+
+    setTimeout(() => {
+        const hint = document.querySelector('#npcHint');
+        if (hint) {
+            hint.setAttribute('visible', 'true');
+        }
+    }, 2000);
+
+    
+},
+
+
+
+createMissionCompletePopup: function() {
+    const scene = document.querySelector('a-scene');
+    const camera = document.querySelector('#camera');
+    
+    // Main popup entity
+    const popup = document.createElement('a-entity');
+    popup.setAttribute('id', 'missionCompletePopup');
+    popup.setAttribute('position', '0 0 -1.5');
+    popup.setAttribute('visible', 'false');
+    
+    // Background
+    const bg = document.createElement('a-plane');
+    bg.setAttribute('width', '2.5');
+    bg.setAttribute('height', '2');
+    bg.setAttribute('color', '#1a1a2e');
+    bg.setAttribute('opacity', '0.95');
+    bg.setAttribute('material', 'side: double');
+    popup.appendChild(bg);
+    
+    // Gold border for "achievement" feel
+    const border = document.createElement('a-plane');
+    border.setAttribute('width', '2.6');
+    border.setAttribute('height', '2.1');
+    border.setAttribute('position', '0 0 -0.01');
+    border.setAttribute('color', '#ffd700');
+    border.setAttribute('opacity', '0.8');
+    border.setAttribute('material', 'side: double');
+    popup.appendChild(border);
+    
+    // Title text
+    const titleEl = document.createElement('a-entity');
+    titleEl.setAttribute('id', 'popupTitle');
+    titleEl.setAttribute('position', '0 0.7 0.02');
+    titleEl.setAttribute('text', 'value: Mission Complete!; align: center; width: 2.2; color: #4fa84a; font: https://cdn.aframe.io/fonts/Roboto-msdf.json');
+    popup.appendChild(titleEl);
+    
+    // Reward text
+    const rewardEl = document.createElement('a-entity');
+    rewardEl.setAttribute('id', 'popupReward');
+    rewardEl.setAttribute('position', '0 0.35 0.02');
+    rewardEl.setAttribute('text', 'value: Reward Unlocked; align: center; width: 2.2; color: #ffd700; font: https://cdn.aframe.io/fonts/Roboto-msdf.json');
+    popup.appendChild(rewardEl);
+    
+    // Description text
+    const descEl = document.createElement('a-entity');
+    descEl.setAttribute('id', 'popupDescription');
+    descEl.setAttribute('position', '0 -0.1 0.02');
+    descEl.setAttribute('text', 'value: Description here; align: center; width: 2.2; wrapCount: 40; color: #ffffff; font: https://cdn.aframe.io/fonts/Roboto-msdf.json');
+    popup.appendChild(descEl);
+    
+    // "Return to Commander Astra" instruction
+    const instructionEl = document.createElement('a-entity');
+    instructionEl.setAttribute('position', '0 -0.6 0.02');
+    instructionEl.setAttribute('text', 'value: Click OK to continue; align: center; width: 2; color: #cccccc; font: https://cdn.aframe.io/fonts/Roboto-msdf.json');
+    popup.appendChild(instructionEl);
+    
+    // OK button
+    const okButton = document.createElement('a-entity');
+    okButton.setAttribute('id', 'popupOkButton');
+    okButton.setAttribute('class', 'interactive');
+    okButton.setAttribute('position', '0 -0.85 0.03');
+    okButton.setAttribute('geometry', 'primitive: box; width: 1; height: 0.25; depth: 0.02');
+    okButton.setAttribute('material', 'color: #00b894');
+    okButton.setAttribute('mission-complete-ok-button', '');
+    
+    const okButtonText = document.createElement('a-entity');
+    okButtonText.setAttribute('position', '0 0 0.02');
+    okButtonText.setAttribute('text', 'value: OK; align: center; width: 1.8; color: #ffffff; font: https://cdn.aframe.io/fonts/Roboto-msdf.json');
+    okButton.appendChild(okButtonText);
+    popup.appendChild(okButton);
+    
+    // Attach to camera so it follows player
+    camera.appendChild(popup);
+    
+    return popup;
+    },
+    
 
     getAnalyzedCount: function () {
         return this.analyzed.size;
@@ -420,7 +574,7 @@ AFRAME.registerComponent('mission-panel', {
         // How many different minerals & rovers we care about
         this.totalMinerals = 4;
         this.totalRovers   = 3;
-
+        
         // Local mission state (for non-inventory objectives)
         this.roversFound   = new Set();
         this.olympusDone   = false;
@@ -1347,6 +1501,11 @@ AFRAME.registerComponent('rover-quiz', {
         const correctValue = '100m';
         const isCorrect = (value === correctValue);
 
+        if (!window.gameState.sojournerFound) {
+        window.gameState.sojournerFound = true;
+        console.log('✅ Sojourner found!');
+    }
+
         // ========== PLAY QUIZ SOUND ==========
         if (window.SoundManager) {
             if (isCorrect) {
@@ -1389,6 +1548,11 @@ AFRAME.registerComponent('rover-quiz', {
             this.score.add(1);       // your score system can show the +1 popup
             this.hasAwardedPoint = true;
         }
+
+        const inventory = this.el.sceneEl.systems['inventory'];
+        if (inventory && inventory.checkMissionCompletion) {
+            inventory.checkMissionCompletion();
+    }
     },
 
     remove: function () {
@@ -1396,6 +1560,7 @@ AFRAME.registerComponent('rover-quiz', {
             this.roverModel.removeEventListener('click', this.onRoverClick);
         }
     }
+
 });
 
 
@@ -1586,6 +1751,10 @@ AFRAME.registerComponent('olympus-quiz', {
             this.hasReportedComplete = true;
             this.el.sceneEl.emit('olympus-quiz-complete', {});
         }
+        const inventory = this.el.sceneEl.systems['inventory'];
+        if (inventory && inventory.checkMissionCompletion) {
+            inventory.checkMissionCompletion();
+    }
 
     },
 
@@ -1806,6 +1975,11 @@ AFRAME.registerComponent('opportunity-quiz', {
         const correct = 'airbags';
         const isCorrect = (value === correct);
 
+        if (!window.gameState.opportunityFound) {
+        window.gameState.opportunityFound = true;
+        console.log('✅ Opportunity found!');
+        }
+
         if (window.SoundManager) {
             if (isCorrect) {
                 window.SoundManager.playSound('quizCorrect');
@@ -1852,6 +2026,11 @@ AFRAME.registerComponent('opportunity-quiz', {
             this.score.add(1);
             this.hasAwardedPoint = true;
         }
+
+        const inventory = this.el.sceneEl.systems['inventory'];
+        if (inventory && inventory.checkMissionCompletion) {
+            inventory.checkMissionCompletion();
+    }
     },
 
     playDeploymentAnimation: function () {
@@ -2137,6 +2316,11 @@ AFRAME.registerComponent('perseverance-quiz', {
         const correct = '45km';
         const isCorrect = (value === correct);
 
+        if (!window.gameState.perseveranceFound) {
+            window.gameState.perseveranceFound = true;
+            console.log('✅ Perseverance found!');
+        }
+
         const explanation =
                 'The ancient lake inside Jezero Crater was about 45 kilometers wide.\n' +
                 'Long ago, rivers flowed into Jezero and filled it with water,\n' +
@@ -2175,6 +2359,11 @@ AFRAME.registerComponent('perseverance-quiz', {
             this.score.add(1);
             this.hasAwardedPoint = true;
         }
+
+        const inventory = this.el.sceneEl.systems['inventory'];
+        if (inventory && inventory.checkMissionCompletion) {
+            inventory.checkMissionCompletion();
+    }
 
     },
 
@@ -2457,9 +2646,10 @@ AFRAME.registerSystem('oxygen', {
             notif.setAttribute('visible', true);
             notif.setAttribute('text', 'color', '#220b0bff');
         }
-        // show the play again button
+        // show the play again button + make it interactive
         if (this.playAgainButtonEl) {
         this.playAgainButtonEl.setAttribute('visible', true);
+        this.playAgainButtonEl.classList.add('interactive'); // ← AJOUTE ÇA
     }
 
         // Emit an event in case other systems/components care
@@ -2472,6 +2662,7 @@ AFRAME.registerComponent('play-again-button', {
   init: function () {
     this.onClick = this.onClick.bind(this);
     this.el.addEventListener('click', this.onClick);
+    this.el.classList.remove('interactive');
   },
 
   remove: function () {
@@ -2479,9 +2670,11 @@ AFRAME.registerComponent('play-again-button', {
   },
 
   onClick: function () {
-    // Reload the whole page to restart everything
-    window.location.reload();
-  }
+    // Reload the whole page to restart everything + only if button visible
+    if (this.el.getAttribute('visible') === true) {
+      window.location.reload();
+    }
+}
 });
 
 AFRAME.registerSystem('eva', {
@@ -2722,4 +2915,90 @@ AFRAME.registerComponent('eva-suit-station', {
 });
 
 
+AFRAME.registerComponent('mission-complete-ok-button', {
+    init: function() {
+        this.onClick = this.onClick.bind(this);
+        this.el.addEventListener('click', this.onClick);
+    },
+    
+    remove: function() {
+        this.el.removeEventListener('click', this.onClick);
+    },
+    
+    onClick: function() {
+        // Hide popup
+        const popup = document.querySelector('#missionCompletePopup');
+        if (popup) {
+            popup.setAttribute('visible', 'false');
+        }
+        
+        // Play UI sound
+        if (window.SoundManager) {
+            window.SoundManager.playSound('uiClick');
+        }
+        
+        // Show notification pointing to NPC
+        const notif = document.querySelector('#notificationText');
+        if (notif) {
+            notif.setAttribute('text', 'value', 'Return to Commander Astra for your next mission');
+            notif.setAttribute('visible', 'true');
+            
+            setTimeout(() => {
+                notif.setAttribute('visible', 'false');
+            }, 3000);
+        }
+    }
+});
 
+// Mission 0 button component
+AFRAME.registerComponent('mission0-button', {
+  init: function() {
+    this.onClick = this.onClick.bind(this);
+    this.el.addEventListener('click', this.onClick);
+  },
+  
+  remove: function() {
+    this.el.removeEventListener('click', this.onClick);
+  },
+  
+  onClick: function() {
+    // Hide button
+    this.el.setAttribute('visible', 'false');
+    
+    // Show mission panel
+    const panel = document.querySelector('#mission0Panel');
+    if (panel) {
+      panel.setAttribute('visible', 'true');
+    }
+    
+    // Play UI sound
+    if (window.SoundManager) {
+      window.SoundManager.playSound('ui');
+    }
+  }
+});
+
+// Mission 0 close button
+AFRAME.registerComponent('mission0-close-button', {
+  init: function() {
+    this.onClick = this.onClick.bind(this);
+    this.el.addEventListener('click', this.onClick);
+  },
+  
+  remove: function() {
+    this.el.removeEventListener('click', this.onClick);
+  },
+  
+  onClick: function() {
+    // Hide mission panel
+    const panel = document.querySelector('#mission0Panel');
+    if (panel) {
+      panel.setAttribute('visible', 'false');
+    }
+    
+    // Play UI sound
+    if (window.SoundManager) {
+      window.SoundManager.playSound('ui');
+    }
+  }
+});
