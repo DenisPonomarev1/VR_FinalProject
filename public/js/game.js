@@ -546,6 +546,48 @@ AFRAME.registerComponent('mission-panel', {
     }
 });
 
+AFRAME.registerComponent('hud-vr-scale', {
+  schema: {
+    desktop: { type: 'number', default: 1 },
+    vr:      { type: 'number', default: 1.8 }
+  },
+
+  init: function () {
+    const setScale = (s) => {
+      this.el.object3D.scale.set(s, s, s);
+    };
+
+    // Initial (desktop) scale
+    setScale(this.data.desktop);
+
+    this.el.sceneEl.addEventListener('enter-vr', () => {
+      setScale(this.data.vr);
+    });
+
+    this.el.sceneEl.addEventListener('exit-vr', () => {
+      setScale(this.data.desktop);
+    });
+  }
+});
+
+AFRAME.registerComponent('hud-vr-position', {
+  schema: {
+    desktop: { type: 'vec3', default: {x: -0.7, y: -0.7, z: -1} },
+    vr:      { type: 'vec3', default: {x: -0.7, y: -0.55, z: -1} }
+  },
+
+  init: function () {
+    const setPos = (v) => {
+      this.el.object3D.position.set(v.x, v.y, v.z);
+    };
+
+    // Desktop by default
+    setPos(this.data.desktop);
+
+    this.el.sceneEl.addEventListener('enter-vr', () => setPos(this.data.vr));
+    this.el.sceneEl.addEventListener('exit-vr',  () => setPos(this.data.desktop));
+  }
+});
 
 
 
@@ -1625,7 +1667,10 @@ AFRAME.registerComponent('opportunity-quiz', {
         const el = this.el;
 
         this.hasReportedLocated = false; // for mission log
-        this.hasAwardedPoint = false;    // for score
+        this.hasAwardedPoint    = false; // for score
+        this.options            = [];
+        this.panel              = null;
+        this.playButton         = null;
 
         // Access score system
         this.score = this.el.sceneEl.systems['score'];
@@ -1636,18 +1681,14 @@ AFRAME.registerComponent('opportunity-quiz', {
             this.roverModel.classList.add('interactive');
         }
 
-        // Grab the floating hint on top of the rover
-        this.hintEl = el.querySelector('.rover-hint');
+        // Floating hint above rover
+        this.hintEl     = el.querySelector('.rover-hint');
         this.hintHidden = false;
 
-        this.options = [];
-        this.panel = null;
-        this.playButton = null;
-
-        // Build quiz panel
+        // Build quiz UI
         this.buildPanel();
 
-        // Clicking the rover toggles panel visibility
+        // Clicking the rover toggles the panel
         this.onRoverClick = this.onRoverClick.bind(this);
         if (this.roverModel) {
             this.roverModel.addEventListener('click', this.onRoverClick);
@@ -1666,7 +1707,10 @@ AFRAME.registerComponent('opportunity-quiz', {
         bg.setAttribute('position', '-0.017 0.245 -0.059');
         bg.setAttribute('width', 2.4);
         bg.setAttribute('height', 1.9);
-        bg.setAttribute('material', 'color: #000000ff; opacity: 0.9; side: double;');
+        bg.setAttribute(
+            'material',
+            'color: #111111; opacity: 0.9; side: double; shader: flat;'
+        );
         panel.appendChild(bg);
 
         // Title
@@ -1676,12 +1720,12 @@ AFRAME.registerComponent('opportunity-quiz', {
             value: this.data.title,
             align: 'center',
             width: 2.3,
-            color: '#460000ff',
+            color: '#460000',
             wrapCount: 32
         });
         panel.appendChild(titleEl);
 
-        // Intro (kid-friendly)
+        // Intro text
         const introEl = document.createElement('a-entity');
         introEl.setAttribute('position', '0 0.3 0.01');
         introEl.setAttribute('text', {
@@ -1694,7 +1738,7 @@ AFRAME.registerComponent('opportunity-quiz', {
         panel.appendChild(introEl);
         this.introEl = introEl;
 
-        // Question (kid-friendly)
+        // Question
         const questionEl = document.createElement('a-entity');
         questionEl.setAttribute('position', '0 -0.33 -0.026');
         questionEl.setAttribute('text', {
@@ -1703,18 +1747,18 @@ AFRAME.registerComponent('opportunity-quiz', {
                 'Think about how you might protect a toy if you dropped it!',
             align: 'center',
             width: 2.2,
-            color: '#ffffff',
+            color: '#ffd480',
             wrapCount: 36
         });
         panel.appendChild(questionEl);
         this.questionEl = questionEl;
 
-        // Answer options (one row of three) – still the same correct one
-        this.createOption('Big airbags + a parachute', 'airbags',  -1.14, -0.7); // correct
+        // Answer options (correct: airbags)
+        this.createOption('Big airbags + a parachute', 'airbags',  -1.14, -0.7);
         this.createOption('Lowered by a sky crane',     'skycrane', -0.06, -0.7);
-        this.createOption('Rocket legs like a spaceship', 'legs',    0.953, -0.7);
+        this.createOption('Rocket legs like a spaceship','legs',     0.953, -0.7);
 
-        // Play animation button (initially hidden)
+        // Play landing animation button (hidden until after answer)
         const playButton = document.createElement('a-entity');
         playButton.setAttribute('visible', false);
         playButton.setAttribute('class', 'interactive');
@@ -1774,7 +1818,7 @@ AFRAME.registerComponent('opportunity-quiz', {
         option.appendChild(labelEl);
 
         option.addEventListener('click', (evt) => {
-            evt.stopPropagation();
+            evt.stopPropagation();  // don’t also trigger rover click
             const chosen = option.getAttribute('data-value');
             this.handleAnswer(chosen);
         });
@@ -1786,13 +1830,13 @@ AFRAME.registerComponent('opportunity-quiz', {
     onRoverClick: function () {
         if (!this.panel) return;
 
-        // Count this rover as located the first time
+        // First time: mark rover located
         if (!this.hasReportedLocated && this.el.sceneEl) {
             this.hasReportedLocated = true;
             this.el.sceneEl.emit('rover-located', { id: 'opportunity' });
         }
 
-        // First click: hide the floating hint forever
+        // Hide hint after first open
         if (!this.hintHidden && this.hintEl) {
             this.hintEl.setAttribute('visible', false);
             this.hintHidden = true;
@@ -1803,9 +1847,10 @@ AFRAME.registerComponent('opportunity-quiz', {
     },
 
     handleAnswer: function (value) {
-        const correct = 'airbags';
+        const correct   = 'airbags';
         const isCorrect = (value === correct);
 
+        // Sounds
         if (window.SoundManager) {
             if (isCorrect) {
                 window.SoundManager.playSound('quizCorrect');
@@ -1823,31 +1868,40 @@ AFRAME.registerComponent('opportunity-quiz', {
             'system called a “sky crane” instead of bouncing air bags.';
 
         const prefix = isCorrect ? 'Correct! 🎉\n\n' : 'Nice try.\n\n';
-        const text = prefix + explanation + '\n\nYou can now play a landing animation.';
+        const text   = prefix + explanation + '\n\nYou can now play a landing animation.';
 
+        // Hide intro, move / change question text into explanation
         if (this.introEl) {
             this.introEl.setAttribute('visible', false);
         }
 
         if (this.questionEl) {
             this.questionEl.setAttribute('position', '0 0.25 0.01');
-            this.questionEl.setAttribute('text', 'value', text);
+            this.questionEl.setAttribute('text', {
+                value: text,
+                align: 'center',
+                width: 2.2,
+                color: '#ffffff',
+                wrapCount: 40
+            });
         }
 
-        // Remove answer buttons so the quiz can’t be repeated
+        // Remove answer buttons so quiz can’t be re-done
         if (this.options && this.options.length) {
             this.options.forEach(opt => {
-                if (opt.parentNode) opt.parentNode.removeChild(opt);
+                if (opt.parentNode) {
+                    opt.parentNode.removeChild(opt);
+                }
             });
             this.options = [];
         }
 
-        // Show "Play landing animation" button
+        // Show play button
         if (this.playButton) {
             this.playButton.setAttribute('visible', true);
         }
 
-        // Award 1 point the first time the quiz is answered correctly
+        // Award 1 point only once, and only if correct
         if (isCorrect && !this.hasAwardedPoint && this.score && this.score.add) {
             this.score.add(1);
             this.hasAwardedPoint = true;
@@ -1857,7 +1911,7 @@ AFRAME.registerComponent('opportunity-quiz', {
     playDeploymentAnimation: function () {
         if (!this.roverModel) return;
 
-        // Allow replay: reset/remove any existing animation-mixer and re-add it
+        // Reset any previous animation-mixer so we can replay
         const hasMixer = this.roverModel.getAttribute('animation-mixer');
         if (hasMixer) {
             this.roverModel.removeAttribute('animation-mixer');
@@ -1877,6 +1931,7 @@ AFRAME.registerComponent('opportunity-quiz', {
         }
     }
 });
+
 
 
 AFRAME.registerComponent('opportunity-skin', {
@@ -2660,6 +2715,10 @@ AFRAME.registerSystem('eva', {
         this._warnedCritical = false;
         this.showNotification('Suit on – ready to explore Mars!');
         this.updateHUD();
+
+        if (this.el) {       
+            this.el.emit('suit-equipped');
+    }
     },
 
     removeSuit: function () {
@@ -2734,6 +2793,108 @@ AFRAME.registerComponent('eva-suit-station', {
         this.labelEl.setAttribute('text', 'value', txt);
     }
 });
+
+AFRAME.registerSystem('mission-tracker', {
+  init: function () {
+    // Ensure global gameState exists
+    if (!window.gameState) window.gameState = {};
+    this.gs = window.gameState;
+
+    // local copies for counting
+    this.collectedCount = this.gs.rocksCollected || 0;
+    this.analyzedCount  = this.gs.rocksAnalyzed || 0;
+
+    // bind handlers so "this" works correctly
+    this.onSuitEquipped        = this.onSuitEquipped.bind(this);
+    this.onInventoryChanged    = this.onInventoryChanged.bind(this);
+    this.onAnalysisChanged     = this.onAnalysisChanged.bind(this);
+    this.onRoverLocated        = this.onRoverLocated.bind(this);
+    this.onOlympusQuizComplete = this.onOlympusQuizComplete.bind(this);
+
+    // listen to scene-level events
+    this.el.addEventListener('suit-equipped',         this.onSuitEquipped);
+    this.el.addEventListener('inventory-changed',     this.onInventoryChanged);
+    this.el.addEventListener('analysis-changed',      this.onAnalysisChanged);
+    this.el.addEventListener('rover-located',         this.onRoverLocated);
+    this.el.addEventListener('olympus-quiz-complete', this.onOlympusQuizComplete);
+  },
+
+  // ---------- MISSION 1: suit up ----------
+  onSuitEquipped: function () {
+    const gs = this.gs;
+
+    // mark mission 1 as completed in global state
+    gs.mission1Completed = true;
+    gs.hasEverWornSuit   = true;
+
+    // fire mission-complete event that npc-dialogue is already listening for
+    this.el.emit('mission1-complete');
+  },
+
+  // ---------- MISSION 2: collect + analyze rocks ----------
+  onInventoryChanged: function (evt) {
+    const list = (evt.detail && evt.detail.collected) || [];
+    this.collectedCount = list.length;
+    this.gs.rocksCollected = this.collectedCount;
+    this.checkMission2Complete();
+  },
+
+  onAnalysisChanged: function (evt) {
+    const list = (evt.detail && evt.detail.analyzed) || [];
+    this.analyzedCount = list.length;
+    this.gs.rocksAnalyzed = this.analyzedCount;
+    this.checkMission2Complete();
+  },
+
+  checkMission2Complete: function () {
+    const gs = this.gs;
+
+    if (this.collectedCount >= 4 &&
+        this.analyzedCount  >= 4 &&
+        !gs.mission2Completed) {
+
+      gs.mission2Completed = true;
+      this.el.emit('mission2-complete');  // npc-dialogue picks this up
+    }
+  },
+
+  // ---------- MISSION 3: find/quiz all rovers ----------
+  onRoverLocated: function (evt) {
+    if (!evt.detail || !evt.detail.id) return;
+    const gs = this.gs;
+    const id = evt.detail.id;
+
+    if (id === 'sojourner')     gs.sojournerFound     = true;
+    if (id === 'opportunity')   gs.opportunityFound   = true;
+    if (id === 'perseverance')  gs.perseveranceFound  = true;
+
+    const total =
+      (gs.sojournerFound    ? 1 : 0) +
+      (gs.opportunityFound  ? 1 : 0) +
+      (gs.perseveranceFound ? 1 : 0);
+
+    gs.roversFound = total;
+
+    if (total >= 3 && !gs.mission3Completed) {
+      gs.mission3Completed = true;
+      this.el.emit('mission3-complete');
+    }
+  },
+
+  // ---------- MISSION 4: Olympus Mons quiz ----------
+  onOlympusQuizComplete: function () {
+    const gs = this.gs;
+
+    gs.olympusReached       = true;      
+    gs.olympusQuizCompleted = true;
+
+    if (!gs.mission4Completed) {
+      gs.mission4Completed = true;
+      this.el.emit('mission4-complete');
+    }
+  }
+});
+
 
 
 
