@@ -19,6 +19,11 @@
   if (typeof gs.mission4Started === 'undefined') gs.mission4Started = false;
   if (typeof gs.mission4Completed === 'undefined') gs.mission4Completed = false;
 
+  if (typeof gs.mission5Started === 'undefined') gs.mission5Started = false;
+  if (typeof gs.mission5Completed === 'undefined') gs.mission5Completed = false;
+  if (typeof gs.quizQuestionsAnswered === 'undefined') gs.quizQuestionsAnswered = 0;
+  if (typeof gs.finalQuizScore === 'undefined') gs.finalQuizScore = 0;
+
   // Mission 2 progress
   if (typeof gs.rocksCollected === 'undefined') gs.rocksCollected = 0;
   if (typeof gs.rocksAnalyzed === 'undefined') gs.rocksAnalyzed = 0;
@@ -58,6 +63,7 @@ AFRAME.registerComponent('npc-dialogue', {
     this.onMission2Complete = this.onMission2Complete.bind(this);
     this.onMission3Complete = this.onMission3Complete.bind(this);
     this.onMission4Complete = this.onMission4Complete.bind(this);
+    this.onMission5Complete = this.onMission5Complete.bind(this);
 
     if (this.el.sceneEl) {
       const scene = this.el.sceneEl;
@@ -65,6 +71,7 @@ AFRAME.registerComponent('npc-dialogue', {
       scene.addEventListener('mission2-complete', this.onMission2Complete);
       scene.addEventListener('mission3-complete', this.onMission3Complete);
       scene.addEventListener('mission4-complete', this.onMission4Complete);
+      scene.addEventListener('mission5-complete', this.onMission5Complete);
     }
   },
 
@@ -75,6 +82,7 @@ AFRAME.registerComponent('npc-dialogue', {
       scene.removeEventListener('mission2-complete', this.onMission2Complete);
       scene.removeEventListener('mission3-complete', this.onMission3Complete);
       scene.removeEventListener('mission4-complete', this.onMission4Complete);
+      scene.removeEventListener('mission5-complete', this.onMission5Complete);
     }
   },
 
@@ -153,7 +161,16 @@ AFRAME.registerComponent('npc-dialogue', {
       return 'mission4_progress';
     }
 
-    if (gs.mission4Completed) {
+    //Mission 5 — Final Quiz (after completing Mission 4)
+    if (gs.mission4Completed && !gs.mission5Started) {
+      return 'mission5_intro';
+    }
+    if (gs.mission5Started && !gs.mission5Completed) {
+      return 'mission5_progress';
+    }
+
+    // All missions complete (including quiz)
+    if (gs.mission5Completed) {
       return 'all_complete';
     }
 
@@ -396,6 +413,61 @@ AFRAME.registerComponent('npc-dialogue', {
         stateKey: null
       },
 
+      mission5_intro: {
+      title: 'Mission 5: Final Review Quiz',
+      pages: [
+        {
+          type: 'greeting',
+          text:
+            'Congratulations on reaching Olympus Mons!\n' +
+            'Now it\'s time for your final evaluation.'
+        },
+        {
+          type: 'description',
+          text:
+            'This quiz will test everything you\'ve learned:\n\n' +
+            '• Airlock safety procedures\n' +
+            '• EVA suit protocols\n' +
+            '• Martian geology\n' +
+            '• Rover history\n' +
+            '• Mars geography'
+        },
+        {
+          type: 'tasks',
+          text: 'Quiz Rules:',
+          tasks: [
+            'Answer 6 review questions',
+            'Earn points for correct answers',
+            'Complete to earn your final certification'
+          ]
+        }
+      ],
+      reward: 'Master Mars Explorer Certificate',
+      stateKey: 'mission5Started'
+    },
+
+    mission5_progress: {
+      title: 'Mission 5: Review Quiz',
+      pages: [
+        {
+          type: 'greeting',
+          text:
+            'Complete the final review quiz to finish your training.'
+        },
+        {
+          type: 'tasks',
+          text: 'Current status:',
+          tasks: [
+            'Answer 6 review questions (0/6)'
+          ]
+        }
+      ],
+      reward: null,
+      stateKey: null
+    },
+
+
+
       // ---------- All complete / no mission ----------
       all_complete: {
         title: 'Congratulations, Master Explorer!',
@@ -403,7 +475,8 @@ AFRAME.registerComponent('npc-dialogue', {
           {
             type: 'greeting',
             text:
-              'You have completed ALL missions on Mars!\n\n' +
+              'You have completed ALL missions on Mars!\n' +
+              'You passed the final review quiz with flying colors.\n\n' +
               'You are now a certified Master Mars Explorer.\n' +
               'The red planet is proud of you, and so am I. Safe travels!'
           }
@@ -724,6 +797,12 @@ AFRAME.registerComponent('npc-dialogue', {
       return `Complete the summit quiz (${done}/1)`;
     }
 
+      // Mission 5 — quiz questions
+    if (task.includes('Answer 6 review questions')) {
+      const answered = gs.quizQuestionsAnswered || 0;
+      return `Answer 6 review questions (${answered}/6)`;
+    }
+
     return task;
   },
 
@@ -746,7 +825,12 @@ AFRAME.registerComponent('npc-dialogue', {
   onMission4Complete: function () {
     const gs = window.gameState || {};
     gs.mission4Completed = true;
-  }
+  },
+
+  onMission5Complete: function () {
+    const gs = window.gameState || {};
+    gs.mission5Completed = true;
+  },
 });
 
 // ---------- Accept button ----------
@@ -776,6 +860,11 @@ AFRAME.registerComponent('npc-accept-button', {
         if (parts.length > 0) {
           const missionId = parts[0];       
           this.el.sceneEl.emit(missionId + '-started', { id: missionId });
+
+          // Special handling for Mission 5 - emit accepted event
+          if (missionId === 'mission5') {
+            this.el.sceneEl.emit('mission5-accepted', {});
+          }
         }
       }
 
