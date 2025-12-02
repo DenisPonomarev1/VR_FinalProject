@@ -1,6 +1,6 @@
 AFRAME.registerComponent('fp-controls', {
     schema: {
-        speed:  { type: 'number', default: 3.5 },
+        speed:  { type: 'number', default: 6 },// SPEED MODIFIER
         radius: { type: 'number', default: 0.35 }
     },
 
@@ -806,6 +806,17 @@ AFRAME.registerComponent('rock-grabbable', {
     },
 
     onClick: function () {
+
+        const gs = window.gameState || {};
+
+        // BLOCK if Mission 2 not yet accepted
+        if (!gs.mission2Started) {
+            const inv = this.el.sceneEl && this.el.sceneEl.systems['inventory'];
+            if (inv && inv.showNotification) {
+                inv.showNotification('Talk to Commander Astra to accept Mission 2 (Geologist Training) before collecting rocks.');
+            }
+            return;
+        }
         // First time we click it, mark as collected in inventory
         if (!this.hasBeenCollected && this.inventory) {
             const added = this.inventory.add(this.data.rockId);
@@ -1078,7 +1089,7 @@ AFRAME.registerComponent('lab-mineral-button', {
             if (this.inventory && this.inventory.markAnalyzed) {
                 this.inventory.markAnalyzed(id);
             }
-        }, 5000); // 5 seconds
+        }, 2000); // 2 seconds CHANGE FOR SUBMISSION
     }
 });
 
@@ -1288,7 +1299,7 @@ AFRAME.registerComponent('rover-quiz', {
             value: this.data.title,
             align: 'center',
             width: 2.4,
-            color: '#000000ff',
+            color: '#000000',
             wrapCount: 28
         });
         panel.appendChild(titleEl);
@@ -1375,15 +1386,27 @@ AFRAME.registerComponent('rover-quiz', {
     },
 
     onRoverClick: function () {
-        // First time the player opens this panel, count this rover as "located"
-        if (!this.hasReportedLocated && this.el.sceneEl) {
-            this.hasReportedLocated = true;
-            this.el.sceneEl.emit('rover-located', { id: 'sojourner' });
-        }
+    const gs = window.gameState || {};
 
-        const visible = this.panel.getAttribute('visible');
-        this.panel.setAttribute('visible', !visible);
-    },
+    // Block until Mission 3 is accepted
+    if (!gs.mission3Started) {
+        const inv = this.el.sceneEl && this.el.sceneEl.systems['inventory'];
+        if (inv && inv.showNotification) {
+            inv.showNotification('You need to accept Mission 3 (Rover History) from Commander Astra before using this rover.');
+        }
+        return;
+    }
+
+    // First time the player opens this panel, count this rover as "located"
+    if (!this.hasReportedLocated && this.el.sceneEl) {
+        this.hasReportedLocated = true;
+        this.el.sceneEl.emit('rover-located', { id: 'sojourner' });
+    }
+
+    const visible = this.panel.getAttribute('visible');
+    this.panel.setAttribute('visible', !visible);
+},
+
 
     handleAnswer: function (value) {
         const correctValue = '100m';
@@ -1458,7 +1481,7 @@ AFRAME.registerComponent('olympus-quiz', {
         const panel = document.createElement('a-entity');
         panel.setAttribute('position', '0 1.5 0');
         panel.setAttribute('rotation', '-15 0 0');
-        panel.setAttribute('visible', true);
+        panel.setAttribute('visible', false); //starts hidden, unlocked with mission
         this.panel = panel;
 
         // Background 
@@ -1517,6 +1540,18 @@ AFRAME.registerComponent('olympus-quiz', {
         // Attach the panel to the anchor
         el.appendChild(panel);
 
+        // Set initial visibility if we already have the mission
+        const gs = window.gameState || {};
+        if (gs.mission4Started) {
+            this.panel.setAttribute('visible', true);
+        }
+
+        // Listen for mission4-started event from the NPC accept button
+        this.onMission4Started = this.onMission4Started.bind(this);
+        if (this.el.sceneEl) {
+            this.el.sceneEl.addEventListener('mission4-started', this.onMission4Started);
+        }
+
         // --- PHOTO PLANE (initially hidden) ---
 
         const photoPlane = document.createElement('a-plane');
@@ -1572,6 +1607,12 @@ AFRAME.registerComponent('olympus-quiz', {
 
         // Store for later removal
         this.options.push(option);
+    },
+
+    onMission4Started: function () {
+        if (this.panel) {
+            this.panel.setAttribute('visible', true);
+        }
     },
 
     handleAnswer: function (value) {
@@ -1643,6 +1684,12 @@ AFRAME.registerComponent('olympus-quiz', {
             side: 'double',
             color: '#FFFFFF'
         });
+    },
+
+    remove: function () {
+        if (this.el.sceneEl && this.onMission4Started) {
+            this.el.sceneEl.removeEventListener('mission4-started', this.onMission4Started);
+        }
     }
 });
 
@@ -1827,24 +1874,35 @@ AFRAME.registerComponent('opportunity-quiz', {
         this.options.push(option);
     },
 
-    onRoverClick: function () {
-        if (!this.panel) return;
+onRoverClick: function () {
+    if (!this.panel) return;
 
-        // First time: mark rover located
-        if (!this.hasReportedLocated && this.el.sceneEl) {
-            this.hasReportedLocated = true;
-            this.el.sceneEl.emit('rover-located', { id: 'opportunity' });
+    const gs = window.gameState || {};
+
+    // Block until Mission 3 is accepted
+    if (!gs.mission3Started) {
+        const inv = this.el.sceneEl && this.el.sceneEl.systems['inventory'];
+        if (inv && inv.showNotification) {
+            inv.showNotification('You need to accept Mission 3 (Rover History) from Commander Astra before using this rover.');
         }
+        return;
+    }
 
-        // Hide hint after first open
-        if (!this.hintHidden && this.hintEl) {
-            this.hintEl.setAttribute('visible', false);
-            this.hintHidden = true;
-        }
+    if (!this.hasReportedLocated && this.el.sceneEl) {
+        this.hasReportedLocated = true;
+        this.el.sceneEl.emit('rover-located', { id: 'opportunity' });
+    }
 
-        const visible = this.panel.getAttribute('visible');
-        this.panel.setAttribute('visible', !visible);
-    },
+    if (!this.hintHidden && this.hintEl) {
+        this.hintEl.setAttribute('visible', false);
+        this.hintHidden = true;
+    }
+
+    const visible = this.panel.getAttribute('visible');
+    this.panel.setAttribute('visible', !visible);
+},
+
+
 
     handleAnswer: function (value) {
         const correct   = 'airbags';
@@ -2072,7 +2130,7 @@ AFRAME.registerComponent('perseverance-quiz', {
             value: this.data.title,
             align: 'center',
             width: 2.4,
-            color: '#8a2309ff',
+            color: '#8a2309',
             wrapCount: 32
         });
         panel.appendChild(titleEl);
@@ -2170,23 +2228,33 @@ AFRAME.registerComponent('perseverance-quiz', {
     },
 
     onRoverClick: function () {
-        if (!this.panel) return;
+    if (!this.panel) return;
 
-        // First time: mark Perseverance as located
-        if (!this.hasReportedLocated && this.el.sceneEl) {
-            this.hasReportedLocated = true;
-            this.el.sceneEl.emit('rover-located', { id: 'perseverance' });
+    const gs = window.gameState || {};
+
+    // Block until Mission 3 is accepted
+    if (!gs.mission3Started) {
+        const inv = this.el.sceneEl && this.el.sceneEl.systems['inventory'];
+        if (inv && inv.showNotification) {
+            inv.showNotification('You need to accept Mission 3 (Rover History) from Commander Astra before using this rover.');
         }
+        return;
+    }
 
-        // hide hint after first open
-        if (!this.hintHidden && this.hintEl) {
-            this.hintEl.setAttribute('visible', false);
-            this.hintHidden = true;
-        }
+    if (!this.hasReportedLocated && this.el.sceneEl) {
+        this.hasReportedLocated = true;
+        this.el.sceneEl.emit('rover-located', { id: 'perseverance' });
+    }
 
-        const visible = this.panel.getAttribute('visible');
-        this.panel.setAttribute('visible', !visible);
+    if (!this.hintHidden && this.hintEl) {
+        this.hintEl.setAttribute('visible', false);
+        this.hintHidden = true;
+    }
+
+    const visible = this.panel.getAttribute('visible');
+    this.panel.setAttribute('visible', !visible);
     },
+
 
     handleAnswer: function (value) {
         const correct = '45km';
@@ -2892,6 +2960,341 @@ AFRAME.registerSystem('mission-tracker', {
       gs.mission4Completed = true;
       this.el.emit('mission4-complete');
     }
+  }
+});
+
+AFRAME.registerComponent('mission-review-quiz', {
+  schema: {
+    title: { type: 'string', default: 'Mars Mission Review' }
+  },
+
+  init: function () {
+    const el = this.el;
+
+    // --- QUESTION DATA (edit/add as you like) ---
+    this.questions = [
+      {
+        id: 'airlock',
+        question:
+          'Airlock Safety:\n' +
+          'What happens if BOTH airlock doors are open at the same time?',
+        options: [
+          'The hub loses oxygen very quickly.',
+          'Oxygen slowly regenerates.',
+          'Nothing happens, air is fine.'
+        ],
+        correctIndex: 0,
+        explanation:
+          'With both doors open, the hub loses oxygen VERY quickly.\n' +
+          'Keep at least one door closed to stay safe!'
+      },
+      {
+        id: 'suit',
+        question:
+          'EVA Suit:\n' +
+          'What do you need BEFORE leaving the base to explore the surface?',
+        options: [
+          'Just a helmet, no suit.',
+          'A full EVA suit with helmet and oxygen.',
+          'Nothing – Mars air is breathable.'
+        ],
+        correctIndex: 1,
+        explanation:
+          'You must wear the full EVA suit (suit, helmet, oxygen line)\n' +
+          'before stepping outside the base.'
+      },
+      {
+        id: 'rocks',
+        question:
+          'Geology Mission:\n' +
+          'How many different mineral samples are you asked to collect and analyze?',
+        options: [
+          '2',
+          '3',
+          '4'
+        ],
+        correctIndex: 2,
+        explanation:
+          'You need to collect and analyze 4 mineral samples:\n' +
+          'basalt, dunite, hematite, and gypsum.'
+      },
+      {
+        id: 'rovers',
+        question:
+          'Rover History:\n' +
+          'Which rovers do you need to locate for Mission 3?',
+        options: [
+          'Sojourner, Opportunity, Perseverance',
+          'Curiosity, Spirit, Perseverance',
+          'Spirit, Curiosity, Opportunity'
+        ],
+        correctIndex: 0,
+        explanation:
+          'Mission 3 asks you to find Sojourner, Opportunity, and Perseverance\n' +
+          'and complete their quizzes.'
+      },
+      {
+        id: 'olympus',
+        question:
+          'Olympus Mons:\n' +
+          'Why is Olympus Mons special compared to Earth\'s mountains?',
+        options: [
+          'It is underwater.',
+          'It is the tallest volcano in the Solar System.',
+          'It is made entirely of ice.'
+        ],
+        correctIndex: 1,
+        explanation:
+          'Olympus Mons is a giant shield volcano about 22 km high —\n' +
+          'about 2.5–3× the height of Mount Everest!'
+      }
+    ];
+
+    this.currentIndex = 0;
+    this.hasAnsweredCurrent = false;
+    this.optionButtons = [];
+
+    // Access the score system (optional, but nice)
+    this.score = this.el.sceneEl.systems['score'] || null;
+
+    // --- BUILD PANEL UI ---
+
+    const panel = document.createElement('a-entity');
+    panel.setAttribute('position', '0 0 0');
+    panel.setAttribute('rotation', '0 0 0');
+    this.panel = panel;
+
+    // Background
+    const bg = document.createElement('a-plane');
+    bg.setAttribute('width', 2.4);
+    bg.setAttribute('height', 1.8);
+    bg.setAttribute('material',
+      'color: #101820; opacity: 0.95; side: double; shader: flat;');
+    panel.appendChild(bg);
+
+    // Title
+    const titleEl = document.createElement('a-entity');
+    titleEl.setAttribute('position', '0 0.75 0.01');
+    titleEl.setAttribute('text', {
+      value: this.data.title,
+      align: 'center',
+      width: 2.2,
+      color: '#ffd480',
+      wrapCount: 30,
+      font: 'https://cdn.aframe.io/fonts/Roboto-msdf.json'
+    });
+    panel.appendChild(titleEl);
+
+    // Progress text (e.g. "Question 1 / 5")
+    const progressEl = document.createElement('a-entity');
+    progressEl.setAttribute('position', '-1.1 0.75 0.01');
+    progressEl.setAttribute('text', {
+      value: '',
+      align: 'left',
+      width: 1.2,
+      color: '#aaaaaa',
+      wrapCount: 10,
+      font: 'https://cdn.aframe.io/fonts/Roboto-msdf.json'
+    });
+    panel.appendChild(progressEl);
+    this.progressEl = progressEl;
+
+    // Question text
+    const questionEl = document.createElement('a-entity');
+    questionEl.setAttribute('position', '0 0.25 0.01');
+    questionEl.setAttribute('text', {
+      value: 'Question goes here',
+      align: 'left',
+      width: 2.1,
+      color: '#ffffff',
+      wrapCount: 40,
+      font: 'https://cdn.aframe.io/fonts/Roboto-msdf.json'
+    });
+    panel.appendChild(questionEl);
+    this.questionEl = questionEl;
+
+    // Explanation / feedback text
+    const explanationEl = document.createElement('a-entity');
+    explanationEl.setAttribute('position', '0 -0.15 0.01');
+    explanationEl.setAttribute('text', {
+      value: '',
+      align: 'left',
+      width: 2.1,
+      color: '#a0e9ff',
+      wrapCount: 40,
+      font: 'https://cdn.aframe.io/fonts/Roboto-msdf.json'
+    });
+    panel.appendChild(explanationEl);
+    this.explanationEl = explanationEl;
+
+    // Answer buttons (3 options, reused for all questions)
+    this.createOptionButton(0, -0.8, -0.65);
+    this.createOptionButton(1,  0.0, -0.65);
+    this.createOptionButton(2,  0.8, -0.65);
+
+    // "Next question" button
+    const nextBtn = document.createElement('a-entity');
+    nextBtn.setAttribute('class', 'interactive');
+    nextBtn.setAttribute('position', '0 -0.95 0.02');
+    nextBtn.setAttribute('geometry',
+      'primitive: box; width: 1.2; height: 0.28; depth: 0.03');
+    nextBtn.setAttribute('material',
+      'color: #0984e3; metalness: 0.2; roughness: 0.7;');
+    nextBtn.setAttribute('visible', false);
+
+    const nextLabel = document.createElement('a-entity');
+    nextLabel.setAttribute('position', '0 0 0.02');
+    nextLabel.setAttribute('text', {
+      value: 'Next question →',
+      align: 'center',
+      width: 2,
+      color: '#ffffff',
+      font: 'https://cdn.aframe.io/fonts/Roboto-msdf.json'
+    });
+    nextBtn.appendChild(nextLabel);
+
+    nextBtn.addEventListener('click', (evt) => {
+      evt.stopPropagation();
+      this.nextQuestion();
+    });
+
+    panel.appendChild(nextBtn);
+    this.nextBtn = nextBtn;
+
+    // Add panel to this anchor entity
+    el.appendChild(panel);
+
+    // Show the first question
+    this.showQuestion(0);
+  },
+
+  createOptionButton: function (index, x, y) {
+    const btn = document.createElement('a-entity');
+    btn.setAttribute('class', 'interactive mission-quiz-option');
+    btn.setAttribute('position', `${x} ${y} 0.02`);
+    btn.setAttribute('geometry',
+      'primitive: box; width: 0.9; height: 0.26; depth: 0.03');
+    btn.setAttribute('material',
+      'color: #263238; metalness: 0.1; roughness: 0.9;');
+
+    const label = document.createElement('a-entity');
+    label.setAttribute('position', '0 0 0.02');
+    label.setAttribute('text', {
+      value: `Option ${index + 1}`,
+      align: 'center',
+      width: 1.6,
+      color: '#ffffff',
+      wrapCount: 16,
+      font: 'https://cdn.aframe.io/fonts/Roboto-msdf.json'
+    });
+    btn.appendChild(label);
+
+    btn.addEventListener('click', (evt) => {
+      evt.stopPropagation();
+      this.handleAnswer(index);
+    });
+
+    this.panel.appendChild(btn);
+    this.optionButtons[index] = {
+      root: btn,
+      labelEl: label
+    };
+  },
+
+  showQuestion: function (index) {
+    if (index < 0 || index >= this.questions.length) {
+      // No more questions
+      this.questionEl.setAttribute('text', 'value',
+        'Quiz complete! You have reviewed all missions.\n' +
+        'Feel free to replay or continue exploring Mars.');
+      this.explanationEl.setAttribute('text', 'value', '');
+      this.progressEl.setAttribute('text', 'value', '');
+      this.optionButtons.forEach(btnObj => {
+        btnObj.root.setAttribute('visible', false);
+      });
+      this.nextBtn.setAttribute('visible', false);
+      return;
+    }
+
+    const q = this.questions[index];
+    this.currentIndex = index;
+    this.hasAnsweredCurrent = false;
+
+    // Update progress label
+    const progressText = `Q ${index + 1} / ${this.questions.length}`;
+    this.progressEl.setAttribute('text', 'value', progressText);
+
+    // Question text
+    this.questionEl.setAttribute('text', 'value', q.question);
+
+    // Clear explanation
+    this.explanationEl.setAttribute('text', 'value', '');
+
+    // Reset buttons and set option labels
+    this.optionButtons.forEach((btnObj, i) => {
+      btnObj.root.setAttribute('visible', true);
+      btnObj.root.setAttribute('material', 'color', '#263238');
+      const labelText = q.options[i] || '';
+      btnObj.labelEl.setAttribute('text', 'value', labelText);
+    });
+
+    // Hide next button until the user answers
+    this.nextBtn.setAttribute('visible', false);
+  },
+
+  handleAnswer: function (chosenIndex) {
+    if (this.hasAnsweredCurrent) return;
+
+    const q = this.questions[this.currentIndex];
+    if (!q) return;
+
+    const isCorrect = (chosenIndex === q.correctIndex);
+
+    // Play sounds using your global SoundManager, if available
+    if (window.SoundManager) {
+      window.SoundManager.playSound(isCorrect ? 'quizCorrect' : 'quizWrong');
+    }
+
+    // Mark that this question has been answered
+    this.hasAnsweredCurrent = true;
+
+    // Color buttons: green for correct, red for chosen wrong
+    this.optionButtons.forEach((btnObj, i) => {
+      let color = '#263238';
+      if (i === q.correctIndex) {
+        color = '#2e7d32';   // green
+      } else if (i === chosenIndex && !isCorrect) {
+        color = '#c62828';   // red for the wrong choice
+      }
+      btnObj.root.setAttribute('material', 'color', color);
+    });
+
+    // Set explanation text
+    const prefix = isCorrect ? 'Correct! \n\n' : 'Nice try.\n\n';
+    this.explanationEl.setAttribute(
+      'text',
+      'value',
+      prefix + q.explanation
+    );
+
+    // Award 1 point per correct answer (only once)
+    if (isCorrect && this.score && this.score.add) {
+      this.score.add(1);
+    }
+
+    // Show "Next question" button (or "Finish" on last one)
+    const isLast = (this.currentIndex >= this.questions.length - 1);
+    const nextLabelText = isLast ? 'Finish quiz' : 'Next question →';
+
+    const labelEl = this.nextBtn.querySelector('[text]');
+    if (labelEl) {
+      labelEl.setAttribute('text', 'value', nextLabelText);
+    }
+    this.nextBtn.setAttribute('visible', true);
+  },
+
+  nextQuestion: function () {
+    this.showQuestion(this.currentIndex + 1);
   }
 });
 

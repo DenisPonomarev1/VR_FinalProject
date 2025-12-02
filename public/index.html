@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Mars Base — FP Controls + Solid Walls + Mars Env</title>
+    <title>Mars Base</title>
     <meta name="description" content="A-Frame Mars Base Hub (custom collisions)">
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
 
@@ -38,7 +38,7 @@
         <a-asset-item id="opportunityRover" response-type="arraybuffer" src="assets/opportunity.glb"></a-asset-item>
         <a-asset-item id="perseveranceRover" response-type="arraybuffer" src="assets/perseverance.glb"></a-asset-item>
         <a-asset-item id="jezeroCraterGLB" response-type="arraybuffer" src="assets/jezeroCrater.glb"></a-asset-item>
-        <a-asset-item id="astronaut_missions" response-type="arraybuffer" src="assets/astronaut-missions.glb"></a-asset-item>
+        <a-asset-item id="astronaut_missions" response-type="arraybuffer" src="assets/astronaut.glb"></a-asset-item>
 
         
         <img id="helmetOverlayImg" src="assets/helmetview.png">
@@ -67,15 +67,15 @@
         <audio id="sndQuizWrong" src="sounds/720893_baggonotes_incorrect_buzz.wav"></audio>
         
         <!-- Lab analysis sound -->
-        <audio id="sndLabAnalysis" src="sounds/340959_aceofspadesproduc100_scanning-...wav"></audio>
+        <audio id="sndLabAnalysis" src="sounds/340959__aceofspadesproduc100__scanning-sound.wav"></audio>
       </a-assets>
 
       <!-- RIG that moves -->
       <a-entity id="rig"
                   position="0 0 0"
-                  fp-controls="speed:3.5; radius:0.35"
+                  fp-controls="speed:7; radius:0.35"
                   sound-manager
-                  footstep-sound="interval: 300"
+                  footstep-sound="interval: 150"
                   audio-zone-controller>
 
       <a-entity id="camera"
@@ -723,7 +723,7 @@
 
       <!-- Collectible basalt rock outside the base -->
       <a-entity id="basaltRockRoot"
-                position="-75.12 7.45 -1.735"
+                position="-46 1.56 4.76"
                 rotation="0 90 0"
                 rock-grabbable="rockId: basalt">
 
@@ -1075,6 +1075,13 @@
         </a-entity>
       </a-entity>
 
+      <!-- Little review quiz next to the lab console -->
+      <a-entity id="missionReviewQuiz"
+          position="0.5 1.2 -3.5"
+          mission-review-quiz>
+      </a-entity>
+
+
 
 
         <a-entity id="jupiterButton" position="0.72 0 4.6">
@@ -1147,22 +1154,23 @@
         id="npc-astronaut"
         class="interactive"
         gltf-model="#astronaut_missions"
-        position="-0.9 0.1 4.6"
-        scale="0.8 0.8 0.8"
+        position="-0.9 1.1 4.6"
+        scale="2 2 2"
         rotation="0 180 0"
         animation-mixer
         npc-dialogue="playerSelector: #rig; textSelector: .npc-text; interactionDistance: 2.5">
 
         <a-entity 
           class="npc-text"
-          position="0 2.5 0"
+          position="0 0.54 0"
+          scale="0.5 0.5 0.5"
           text="value: New Mission Available! Click me!;
                 align: center;
                 width: 4;
                 color: #FFD700;"
           animation="property: position;
-                    from: 0 2.5 0;
-                    to: 0 2.7 0;
+                    from: 0 0.54 0;
+                    to: 0 0.58 0;
                     dir: alternate;
                     loop: true;
                     dur: 1000;

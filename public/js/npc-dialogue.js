@@ -80,11 +80,21 @@ AFRAME.registerComponent('npc-dialogue', {
 
   // ---------- CLICK SETUP ----------
   setupClickListener: function () {
-    // Make NPC clickable with your raycaster
+    // Make NPC clickable with raycaster
     this.el.classList.add('interactive');
 
     this.el.addEventListener('click', () => {
-      // Optional distance gating
+      if (!this.dialoguePanel) return;
+
+      const isOpen = !!this.dialoguePanel.getAttribute('visible');
+
+      // If panel is already open → close it
+      if (isOpen) {
+        this.hideDialogue();
+        return;
+      }
+
+      // Otherwise, we're trying to OPEN it → check distance first
       if (this.player) {
         const npcPos = new THREE.Vector3();
         const playerPos = new THREE.Vector3();
@@ -92,10 +102,12 @@ AFRAME.registerComponent('npc-dialogue', {
         this.player.object3D.getWorldPosition(playerPos);
         const dist = npcPos.distanceTo(playerPos);
         if (dist > this.data.maxDistance) {
-          // Too far: just ignore click
+          // Too far: ignore click
           return;
         }
       }
+
+      // Close → open
       this.showDialogue();
     });
   },
@@ -164,9 +176,9 @@ AFRAME.registerComponent('npc-dialogue', {
             type: 'description',
             text:
               'Before we do anything else, you must understand the airlock.\n\n' +
-              '• If ONE door is open, the hub slowly loses oxygen.\n' +
-              '• If BOTH doors are open, you lose oxygen VERY quickly.\n' +
-              '• If Hub O₂ reaches 0%, you fail the mission.'
+              'If ONE door is open, the hub slowly loses oxygen.\n' +
+              'If BOTH doors are open, you lose oxygen VERY quickly.\n' +
+              'If Hub O₂ reaches 0%, you fail the mission.'
           },
           {
             type: 'tasks',
@@ -179,7 +191,7 @@ AFRAME.registerComponent('npc-dialogue', {
           }
         ],
         reward: 'Airlock safety cleared.',
-        stateKey: 'mission0Started' // “Accept” = I understood
+        stateKey: 'mission0Started' 
       },
 
       // ---------- Mission 1 ----------
@@ -550,6 +562,13 @@ AFRAME.registerComponent('npc-dialogue', {
     this.dialoguePanel.setAttribute('rotation', '0 180 0');
   },
 
+  // ---------- Hide dialogue ----------
+  hideDialogue: function () {
+    if (!this.dialoguePanel) return;
+    this.dialoguePanel.setAttribute('visible', 'false');
+  },
+
+
   // ---------- Show dialogue ----------
   showDialogue: function () {
     this.currentMission = this.getCurrentMission();
@@ -743,12 +762,20 @@ AFRAME.registerComponent('npc-accept-button', {
       const gs = window.gameState || {};
 
       if (stateKey && gs) {
-        // Generic "mission started" flag
         gs[stateKey] = true;
 
         // Special case: Mission 0 is just tutorial, mark it as "done" on accept
         if (missionKey === 'mission0_intro') {
           gs.mission0Started = true;
+        }
+      }
+
+      // 🆕 Broadcast a mission-started event like "mission2-started"
+      if (missionKey && this.el.sceneEl) {
+        const parts = missionKey.split('_'); 
+        if (parts.length > 0) {
+          const missionId = parts[0];       
+          this.el.sceneEl.emit(missionId + '-started', { id: missionId });
         }
       }
 
