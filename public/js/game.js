@@ -425,6 +425,12 @@ AFRAME.registerComponent('mission-panel', {
         this.roversFound   = new Set();
         this.olympusDone   = false;
 
+        // Mission completion sound flags
+        this.mission1Done = false;
+        this.mission2Done = false;
+        this.mission3Done = false;
+        this.mission4Done = false;
+
         // Bind handlers so "this" works inside callbacks
         this.updateFromInventory = this.updateFromInventory.bind(this);
         this.onRoverLocated      = this.onRoverLocated.bind(this);
@@ -494,6 +500,10 @@ AFRAME.registerComponent('mission-panel', {
 
             if (this.rocksStrike) {
                 this.rocksStrike.setAttribute('visible', done);
+                if (done && !this.mission1Done) {
+                this.mission1Done = true;
+                if (window.SoundManager) window.SoundManager.playSound('missionComplete');
+            }
             }
         }
 
@@ -508,6 +518,10 @@ AFRAME.registerComponent('mission-panel', {
 
             if (this.analyzeStrike) {
                 this.analyzeStrike.setAttribute('visible', done);
+                if (done && !this.mission2Done) {
+                this.mission2Done = true;
+                if (window.SoundManager) window.SoundManager.playSound('missionComplete');
+            }
             }
         }
 
@@ -522,6 +536,10 @@ AFRAME.registerComponent('mission-panel', {
 
             if (this.roversStrike) {
                 this.roversStrike.setAttribute('visible', done);
+                if (done && !this.mission3Done) {
+                this.mission3Done = true;
+                if (window.SoundManager) window.SoundManager.playSound('missionComplete');
+            }
             }
         }
 
@@ -541,6 +559,10 @@ AFRAME.registerComponent('mission-panel', {
             }
             if (this.olympusStrike2) {
                 this.olympusStrike2.setAttribute('visible', done);
+                if (done && !this.mission4Done) {
+                this.mission4Done = true;
+                if (window.SoundManager) window.SoundManager.playSound('missionComplete');
+            }
             }
         }
     }
@@ -2259,6 +2281,15 @@ AFRAME.registerComponent('perseverance-quiz', {
     handleAnswer: function (value) {
         const correct = '45km';
         const isCorrect = (value === correct);
+
+        // ========== PLAY QUIZ SOUND ==========
+        if (window.SoundManager) {
+            if (isCorrect) {
+                window.SoundManager.playSound('quizCorrect');
+            } else {
+                window.SoundManager.playSound('quizWrong');
+            }
+        }
 
         const explanation =
                 'The ancient lake inside Jezero Crater was about 45 kilometers wide.\n' +

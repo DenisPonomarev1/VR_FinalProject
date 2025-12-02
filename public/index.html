@@ -68,6 +68,10 @@
         
         <!-- Lab analysis sound -->
         <audio id="sndLabAnalysis" src="sounds/340959__aceofspadesproduc100__scanning-sound.wav"></audio>
+
+        <audio id="sndBaseAmbience" src="sounds/524951__burning-mir__space-ambient-v02.wav"></audio>
+        <audio id="sndMissionComplete" src="sounds/433700__dersuperanton__mission-completed-deep-voice.wav"></audio>
+        <audio id="sndRoverIdle" src="sounds/353263__thespiderwriter__droid-hum.mp3"></audio>
       </a-assets>
 
       <!-- RIG that moves -->
@@ -131,7 +135,8 @@
                   geometry="primitive: plane; width: 0.9; height: 0.22"
                   material="color: #222; opacity: 0.9; transparent: true; side: double;"
                   visible="false"
-                  play-again-button>
+                  play-again-button
+                  ui-sound>
           <a-entity position="0 0 0.01"
                     text="value: Play again;
                           align: center;
@@ -629,7 +634,9 @@
       <a-entity id="sojournerRoverRoot"
                 position="26 1.2 38"
                 rotation="0 180 0"
-                rover-quiz>  
+                rover-quiz
+                spatial-sound="src: sounds/353263__thespiderwriter__droid-hum.mp3; loop: true; volume: 0.3; refDistance: 2; maxDistance: 8">
+>  
 
         <!-- Rover model  -->
         <a-entity id="sojournerModel"
@@ -658,7 +665,9 @@
       <!-- Opportunity rover with quiz and deployment animation -->
       <a-entity id="opportunityRoverRoot"
                 position="36.5 0.14 -37.5"
-                opportunity-quiz>
+                opportunity-quiz
+                spatial-sound="src: sounds/353263__thespiderwriter__droid-hum.mp3; loop: true; volume: 0.35; refDistance: 3; maxDistance: 10">
+>
 
         <!-- Rover model -->
         <a-entity id="opportunityModel"
@@ -689,7 +698,8 @@
       <a-entity id="perseveranceRoverRoot"
                 position="-73.4 0.34 39.3"
                 rotation="0 140 0"
-                perseverance-quiz>
+                perseverance-quiz
+                spatial-sound="src: sounds/353263__thespiderwriter__droid-hum.mp3; loop: true; volume: 0.4; refDistance: 3; maxDistance: 12">
 
         <!-- Rover model -->
         <a-entity id="perseveranceModel"
@@ -1003,7 +1013,8 @@
                                     dir: alternate;
                                     loop: true;
                                     dur: 1000;
-                                    easing: easeInOutSine">
+                                    easing: easeInOutSine"
+                   ui-sound>
         </a-entity>
 
       </a-entity>

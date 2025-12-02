@@ -24,6 +24,10 @@ AFRAME.registerComponent('sound-manager', {
     this.createSoundEntity('labAnalysis', 'sounds/340959__aceofspadesproduc100__scanning-sound.wav', false, 0.5);
     this.createSoundEntity('baseAmbience', 'sounds/524951__burning-mir__space-ambient-v02.wav', true, 0.2);
 
+    this.createSoundEntity('missionComplete', 'sounds/433700__dersuperanton__mission-completed-deep-voice.wav', false, 10);
+    this.createSoundEntity('roverIdle', 'sounds/353263__thespiderwriter__droid-hum.mp3', true, 10);
+
+
     console.log('[Sound Manager] ✅ All sounds loaded!');
     
     // Make sound manager globally accessible

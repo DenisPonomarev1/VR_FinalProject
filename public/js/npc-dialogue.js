@@ -567,6 +567,7 @@ AFRAME.registerComponent('npc-dialogue', {
     const backButton = document.createElement('a-entity');
     backButton.setAttribute('id', 'npcBackButton');
     backButton.setAttribute('class', 'interactive');
+    backButton.setAttribute('ui-sound', '');
     backButton.setAttribute('position', '-0.65 0 0');
     backButton.setAttribute(
       'geometry',
@@ -589,6 +590,7 @@ AFRAME.registerComponent('npc-dialogue', {
     const nextButton = document.createElement('a-entity');
     nextButton.setAttribute('id', 'npcNextButton');
     nextButton.setAttribute('class', 'interactive');
+    nextButton.setAttribute('ui-sound', '');
     nextButton.setAttribute('position', '0.65 0 0');
     nextButton.setAttribute(
       'geometry',
@@ -610,6 +612,7 @@ AFRAME.registerComponent('npc-dialogue', {
     const acceptButton = document.createElement('a-entity');
     acceptButton.setAttribute('id', 'npcAcceptButton');
     acceptButton.setAttribute('class', 'interactive');
+    acceptButton.setAttribute('ui-sound', '');
     acceptButton.setAttribute('position', '0.34 0 0');
     acceptButton.setAttribute(
       'geometry',
